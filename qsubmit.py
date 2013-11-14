@@ -7,108 +7,108 @@ import os, sys
 # import subprocess
 # import getopt, ConfigParser
 # import datetime, time
+import configparser
 import logging
 import argparse
 
-# class Setup:
-#     def __init__ (self):
-#         self._debug_            = False
-#         self._test_             = False
-#         self._default_setup_    = ""
-#         self._cadfael_version_  = "pro"
-#         self._bayeux_version_   = "trunk"
-#         self._channel_version_  = "trunk"
-#         self._falaise_version_  = "trunk"
-#         self._use_hpss_         = 0
-#         self._use_sps_          = 0
-#         self._use_xrootd_       = 0
-#         self._cpu_time_         = ""
-#         self._memory_           = ""
-#         self._space_size_       = ""
-#         self._pre_command_      = ""
-#         self._run_command_      = ""
-#         self._post_command_     = ""
-#         self._nbr_jobs_         = 0
-#         self._script_directory_ = ""
-#         self._script_prefix_    = ""
-#         self._script_extension_ = ".sh"
-#         self._script_           = ""
+class BaseSetup:
+    def __init__ (self):
+        self._test_             = False
+        self._default_setup_    = ""
+        self._cadfael_version_  = "pro"
+        self._bayeux_version_   = "trunk"
+        self._channel_version_  = "trunk"
+        self._falaise_version_  = "trunk"
+        self._pre_command_      = ""
+        self._run_command_      = ""
+        self._post_command_     = ""
+        self._nbr_jobs_         = 0
+        self._script_directory_ = ""
+        self._script_prefix_    = ""
+        self._script_extension_ = ".sh"
+        self._script_           = ""
 
-#     def _set_debug (self, debug_ = True):
-#         self._debug_ = debug_
+    def _parse (self, config_file_):
+        a_logger = logging.getLogger ('BaseSetup::_parse')
+        a_config = configparser.ConfigParser ()
+        a_config.read (config_file_)
+
+        # Get default setup :
+        self._default_setup_ = a_config.get ("config", "default_setup")
+
+        if not self._default_setup_ in ("lyon", "lal", "local"):
+            raise ValueError ('Default setup ' + self._default_setup_ + ' is not supported !')
+
+        a_logger ('Default setup is', self._default_setup_)
+
+        # # Get software version :
+        # self._cadfael_version_ = a_config.get ("config", "cadfael_version")
+        # self._bayeux_version_  = a_config.get ("config", "bayeux_version")
+        # self._channel_version_ = a_config.get ("config", "channel_version")
+        # self._falaise_version_ = a_config.get ("config", "falaise_version")
+
+        # status = self._check_version ()
+
+        # if not status:
+        #     print "ERROR: qsubmit::Setup::_parse: Checking software version fails! Exit!"
+        #     sys.exit (2)
+
+        # if self._debug_:
+        #     print "DEBUG: qsubmit::Setup::_parse: Cadfael version  =", self._cadfael_version_
+        #     print "DEBUG: qsubmit::Setup::_parse: Bayeux version   =", self._bayeux_version_
+        #     print "DEBUG: qsubmit::Setup::_parse: Channel version  =", self._channel_version_
+        #     print "DEBUG: qsubmit::Setup::_parse: Falaise version  =", self._falaise_version_
+
+        # if self._default_setup_ in "lyon":
+        #     # Get job resources parameters:
+        #     self._use_hpss_   = a_config.get ("resources", "use_hpss")
+        #     self._use_sps_    = a_config.get ("resources", "use_sps")
+        #     self._use_xrootd_ = a_config.get ("resources", "use_xrootd")
+        #     self._memory_     = a_config.get ("resources", "memory")
+        #     self._cpu_time_   = a_config.get ("resources", "cpu_time")
+        #     self._space_size_ = a_config.get ("resources", "space_size")
+
+        #     if self._debug_:
+        #         print "DEBUG: qsubmit::Setup::_parse: Use HPSS         =", self._use_hpss_
+        #         print "DEBUG: qsubmit::Setup::_parse: Use SPS          =", self._use_sps_
+        #         print "DEBUG: qsubmit::Setup::_parse: Use xrootd       =", self._use_xrootd_
+        #         print "DEBUG: qsubmit::Setup::_parse: CPU time value   =", self._cpu_time_
+        #         print "DEBUG: qsubmit::Setup::_parse: Memory value     =", self._memory_
+        #         print "DEBUG: qsubmit::Setup::_parse: Space size value =", self._space_size_
+
+        # # Getting commands to be executed:
+        # self._pre_command_  = a_config.get ("command", "pre_command")
+        # self._run_command_  = a_config.get ("command", "run_command")
+        # self._post_command_ = a_config.get ("command", "post_command")
+        # if self._debug_:
+        #     print "DEBUG: qsubmit::Setup::_parse: Pre command  =", self._pre_command_
+        #     print "DEBUG: qsubmit::Setup::_parse: Run command  =", self._run_command_
+        #     print "DEBUG: qsubmit::Setup::_parse: Post command =", self._post_command_
+
+        # # Getting jobs setup:
+        # sdir = a_config.get ("jobs", "script_directory")
+        # self._script_directory_ = os.path.expandvars (sdir)
+        # self._nbr_jobs_         = a_config.get ("jobs", "nbr_jobs")
+        # self._script_prefix_    = a_config.get ("jobs", "script_prefix")
+        # self._script_extension_ = a_config.get ("jobs", "script_extension")
+        # if self._debug_:
+        #     print "DEBUG: qsubmit::Setup::_parse: Number of jobs   =", self._nbr_jobs_
+        #     print "DEBUG: qsubmit::Setup::_parse: Script prefix    =", self._script_prefix_
+        #     print "DEBUG: qsubmit::Setup::_parse: Script directory =", self._script_directory_
+        #     print "DEBUG: qsubmit::Setup::_parse: Script extension =", self._script_extension_
+
+
+class LyonSetup (BaseSetup):
+    def __init__ (self):
+        self._use_hpss_         = 0
+        self._use_sps_          = 0
+        self._use_xrootd_       = 0
+        self._cpu_time_         = ""
+        self._memory_           = ""
+        self._space_size_       = ""
 
 #     def _set_test (self, test_ = True):
 #         self._test_ = test_
-
-#     def _parse (self, config_file_):
-#         a_config = ConfigParser.ConfigParser ()
-#         a_config.read (config_file_)
-
-#         # Get default setup :
-#         self._default_setup_ = a_config.get ("config", "default_setup")
-
-#         if not self._default_setup_ in ("lyon", "lal", "local"):
-#             print "ERROR: qsubmit::Setup::parse: Default setup", self._default_setup_, "is not supported! Exit!"
-#             sys.exit (2)
-
-#         if self._debug_:
-#             print "DEBUG: qsubmit::Setup::_parse: Default setup is", self._default_setup_
-
-#         # Get software version :
-#         self._cadfael_version_ = a_config.get ("config", "cadfael_version")
-#         self._bayeux_version_  = a_config.get ("config", "bayeux_version")
-#         self._channel_version_ = a_config.get ("config", "channel_version")
-#         self._falaise_version_ = a_config.get ("config", "falaise_version")
-
-#         status = self._check_version ()
-
-#         if not status:
-#             print "ERROR: qsubmit::Setup::_parse: Checking software version fails! Exit!"
-#             sys.exit (2)
-
-#         if self._debug_:
-#             print "DEBUG: qsubmit::Setup::_parse: Cadfael version  =", self._cadfael_version_
-#             print "DEBUG: qsubmit::Setup::_parse: Bayeux version   =", self._bayeux_version_
-#             print "DEBUG: qsubmit::Setup::_parse: Channel version  =", self._channel_version_
-#             print "DEBUG: qsubmit::Setup::_parse: Falaise version  =", self._falaise_version_
-
-#         if self._default_setup_ in "lyon":
-#             # Get job resources parameters:
-#             self._use_hpss_   = a_config.get ("resources", "use_hpss")
-#             self._use_sps_    = a_config.get ("resources", "use_sps")
-#             self._use_xrootd_ = a_config.get ("resources", "use_xrootd")
-#             self._memory_     = a_config.get ("resources", "memory")
-#             self._cpu_time_   = a_config.get ("resources", "cpu_time")
-#             self._space_size_ = a_config.get ("resources", "space_size")
-
-#             if self._debug_:
-#                 print "DEBUG: qsubmit::Setup::_parse: Use HPSS         =", self._use_hpss_
-#                 print "DEBUG: qsubmit::Setup::_parse: Use SPS          =", self._use_sps_
-#                 print "DEBUG: qsubmit::Setup::_parse: Use xrootd       =", self._use_xrootd_
-#                 print "DEBUG: qsubmit::Setup::_parse: CPU time value   =", self._cpu_time_
-#                 print "DEBUG: qsubmit::Setup::_parse: Memory value     =", self._memory_
-#                 print "DEBUG: qsubmit::Setup::_parse: Space size value =", self._space_size_
-
-#         # Getting commands to be executed:
-#         self._pre_command_  = a_config.get ("command", "pre_command")
-#         self._run_command_  = a_config.get ("command", "run_command")
-#         self._post_command_ = a_config.get ("command", "post_command")
-#         if self._debug_:
-#             print "DEBUG: qsubmit::Setup::_parse: Pre command  =", self._pre_command_
-#             print "DEBUG: qsubmit::Setup::_parse: Run command  =", self._run_command_
-#             print "DEBUG: qsubmit::Setup::_parse: Post command =", self._post_command_
-
-#         # Getting jobs setup:
-#         sdir = a_config.get ("jobs", "script_directory")
-#         self._script_directory_ = os.path.expandvars (sdir)
-#         self._nbr_jobs_         = a_config.get ("jobs", "nbr_jobs")
-#         self._script_prefix_    = a_config.get ("jobs", "script_prefix")
-#         self._script_extension_ = a_config.get ("jobs", "script_extension")
-#         if self._debug_:
-#             print "DEBUG: qsubmit::Setup::_parse: Number of jobs   =", self._nbr_jobs_
-#             print "DEBUG: qsubmit::Setup::_parse: Script prefix    =", self._script_prefix_
-#             print "DEBUG: qsubmit::Setup::_parse: Script directory =", self._script_directory_
-#             print "DEBUG: qsubmit::Setup::_parse: Script extension =", self._script_extension_
 
 #     def _check_version (self):
 #         if self._cadfael_version_ and self._cadfael_version_ not in ("pro", "trunk"):
@@ -385,7 +385,7 @@ def main ():
     parser.add_argument ('--log',
                          choices=['critical', 'error', 'warning', 'info', 'debug'],
                          default='warning',
-                         help='only generate file but do not run batch process')
+                         help='logging level')
     parser.add_argument ('--test', action='store_true',
                          help='only generate file but do not run batch process')
     parser.add_argument ('--config', required=True, type=argparse.FileType('r'),
@@ -396,29 +396,16 @@ def main ():
     numeric_level = getattr(logging, args.log.upper(), None)
     logging.basicConfig(format='%(name)s - %(levelname)s: %(message)s', level=numeric_level)
 
-    logger = logging.getLogger (__name__)
-    logger.debug ('debug message')
-    logger.warning ('warning message')
+    print (args.log, numeric_level)
 
-    print (numeric_level)
-    # print args.test
-
-    # config_file = ""
-    # debug       = False
-    # test        = False
-
-    # if config_file == "":
-    #     print "ERROR: qsubmit::main: Missing config file!\n"
-    #     usage ()
-    #     sys.exit ()
-
+    # logger = logging.getLogger (__name__)
+    # logger.info ('Parsing ' + args.config + ' config file')
     # print "NOTICE: qsubmit::main: Parsing", config_file, "config file"
 
-    # # Read the config file:
-    # a_setup = Setup ()
-    # a_setup._set_debug (debug)
+    # Read the config file:
+    a_setup = BaseSetup ()
     # a_setup._set_test (test)
-    # a_setup._parse (config_file)
+    a_setup._parse (args.config)
 
     # # Run jobs:
     # a_setup._submit ()
@@ -427,4 +414,4 @@ def main ():
 if __name__ == "__main__":
     main ()
 
-# end of create_script.py.skel
+# end of qsubmit.py
