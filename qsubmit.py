@@ -27,54 +27,47 @@ class BaseSetup:
         self._script_prefix_    = ""
         self._script_extension_ = ".sh"
         self._script_           = ""
+        self._logger_ = logging.getLogger ()
 
     def _parse (self, config_file_):
-        a_logger = logging.getLogger ('BaseSetup::_parse')
         a_config = configparser.ConfigParser ()
         a_config.read (config_file_)
 
         # Get default setup :
-        self._default_setup_ = a_config.get ("config", "default_setup")
+        self._default_setup_ = a_config['config']['default_setup']
 
         if not self._default_setup_ in ("lyon", "lal", "local"):
             raise ValueError ('Default setup ' + self._default_setup_ + ' is not supported !')
+        self._logger_.debug ('Default setup is ' + self._default_setup_)
 
-        a_logger ('Default setup is', self._default_setup_)
+        # Get software version :
+        self._cadfael_version_ = a_config['config']['cadfael_version']
+        self._bayeux_version_  = a_config['config']['bayeux_version']
+        self._channel_version_ = a_config['config']['channel_version']
+        self._falaise_version_ = a_config['config']['falaise_version']
 
-        # # Get software version :
-        # self._cadfael_version_ = a_config.get ("config", "cadfael_version")
-        # self._bayeux_version_  = a_config.get ("config", "bayeux_version")
-        # self._channel_version_ = a_config.get ("config", "channel_version")
-        # self._falaise_version_ = a_config.get ("config", "falaise_version")
+        if not self._check_version ():
+            raise ValueError ('Checking software version fails!')
 
-        # status = self._check_version ()
+        self._logger_.debug ('Cadfael version = ' + self._cadfael_version_)
+        self._logger_.debug ('Bayeux  version = ' + self._bayeux_version_)
+        self._logger_.debug ('Channel version = ' + self._channel_version_)
+        self._logger_.debug ('Falaise version = ' + self._falaise_version_)
 
-        # if not status:
-        #     print "ERROR: qsubmit::Setup::_parse: Checking software version fails! Exit!"
-        #     sys.exit (2)
-
-        # if self._debug_:
-        #     print "DEBUG: qsubmit::Setup::_parse: Cadfael version  =", self._cadfael_version_
-        #     print "DEBUG: qsubmit::Setup::_parse: Bayeux version   =", self._bayeux_version_
-        #     print "DEBUG: qsubmit::Setup::_parse: Channel version  =", self._channel_version_
-        #     print "DEBUG: qsubmit::Setup::_parse: Falaise version  =", self._falaise_version_
-
-        # if self._default_setup_ in "lyon":
-        #     # Get job resources parameters:
-        #     self._use_hpss_   = a_config.get ("resources", "use_hpss")
-        #     self._use_sps_    = a_config.get ("resources", "use_sps")
-        #     self._use_xrootd_ = a_config.get ("resources", "use_xrootd")
-        #     self._memory_     = a_config.get ("resources", "memory")
-        #     self._cpu_time_   = a_config.get ("resources", "cpu_time")
-        #     self._space_size_ = a_config.get ("resources", "space_size")
-
-        #     if self._debug_:
-        #         print "DEBUG: qsubmit::Setup::_parse: Use HPSS         =", self._use_hpss_
-        #         print "DEBUG: qsubmit::Setup::_parse: Use SPS          =", self._use_sps_
-        #         print "DEBUG: qsubmit::Setup::_parse: Use xrootd       =", self._use_xrootd_
-        #         print "DEBUG: qsubmit::Setup::_parse: CPU time value   =", self._cpu_time_
-        #         print "DEBUG: qsubmit::Setup::_parse: Memory value     =", self._memory_
-        #         print "DEBUG: qsubmit::Setup::_parse: Space size value =", self._space_size_
+        if self._default_setup_ in "lyon":
+            # Get job resources parameters:
+            self._use_hpss_   = a_config['resources'].getboolean ('use_hpss', fallback=False)
+            self._use_sps_    = a_config['resources'].getboolean ('use_sps', fallback=False)
+            self._use_xrootd_ = a_config['resources'].getboolean ('use_xrootd', fallback=False)
+            self._memory_     = a_config['resources'].getfloat ('memory', fallback=0.0)
+            self._cpu_time_   = a_config['resources'].get ('cpu_time', fallback='00:00:00')
+            self._space_size_ = a_config['resources'].getfloat ('space_size', fallback=0.0)
+            self._logger_.debug ('Use HPSS         = ' + str (self._use_hpss_))
+            self._logger_.debug ('Use SPS          = ' + str (self._use_sps_))
+            self._logger_.debug ('Use xrootd       = ' + str (self._use_xrootd_))
+            self._logger_.debug ('CPU time value   = ' + str (self._cpu_time_))
+            self._logger_.debug ('Memory value     = ' + str (self._memory_))
+            self._logger_.debug ('Space size value = ' + str (self._space_size_))
 
         # # Getting commands to be executed:
         # self._pre_command_  = a_config.get ("command", "pre_command")
@@ -97,37 +90,20 @@ class BaseSetup:
         #     print "DEBUG: qsubmit::Setup::_parse: Script directory =", self._script_directory_
         #     print "DEBUG: qsubmit::Setup::_parse: Script extension =", self._script_extension_
 
-
-class LyonSetup (BaseSetup):
-    def __init__ (self):
-        self._use_hpss_         = 0
-        self._use_sps_          = 0
-        self._use_xrootd_       = 0
-        self._cpu_time_         = ""
-        self._memory_           = ""
-        self._space_size_       = ""
-
-#     def _set_test (self, test_ = True):
-#         self._test_ = test_
-
-#     def _check_version (self):
-#         if self._cadfael_version_ and self._cadfael_version_ not in ("pro", "trunk"):
-#             print "ERROR: qsubmit::Setup::check_version: Cadfael version", \
-#                 self._cadfael_version_, "is unkown"
-#             return False
-#         if self._bayeux_version_ and self._bayeux_version_ not in ("pro", "trunk"):
-#             print "ERROR: qsubmit::Setup::check_version: Bayeux version", \
-#                 self._bayeux_version_, "is unkown"
-#             return False
-#         if self._channel_version_ and self._channel_version_ not in ("pro", "trunk"):
-#             print "ERROR: qsubmit::Setup::check_version: Channel version", \
-#                 self._channel_version_, "is unkown"
-#             return False
-#         if self._falaise_version_ and self._falaise_version_ not in ("pro", "trunk"):
-#             print "ERROR: qsubmit::Setup::check_version: Falaise version", \
-#                 self._falaise_version_, "is unkown"
-#             return False
-#         return True
+    def _check_version (self):
+        if self._cadfael_version_ and self._cadfael_version_ not in ("pro", "trunk"):
+            self._logger_.error ('Cadfael version ' + self._cadfael_version_ + ' is unkown')
+            return False
+        if self._bayeux_version_ and self._bayeux_version_ not in ("pro", "trunk"):
+            self._logger_.error ('Bayeux version ' + self._bayeux_version_ + ' is unkown')
+            return False
+        if self._channel_version_ and self._channel_version_ not in ("pro", "trunk"):
+            self._logger_.error ('Channel version ' + self._channel_version_ + ' is unkown')
+            return False
+        if self._falaise_version_ and self._falaise_version_ not in ("pro", "trunk"):
+            self._logger_.error ('Falaise version ' + self._falaise_version_ + ' is unkown')
+            return False
+        return True
 
 #     def _build_header (self):
 #         current_date = datetime.datetime.now ()
@@ -378,6 +354,16 @@ class LyonSetup (BaseSetup):
 #         # Run postcommand:
 #         self._run_post_command ()
 
+
+class LyonSetup (BaseSetup):
+    def __init__ (self):
+        self._use_hpss_         = 0
+        self._use_sps_          = 0
+        self._use_xrootd_       = 0
+        self._cpu_time_         = ""
+        self._memory_           = ""
+        self._space_size_       = ""
+
 # main function:
 def main ():
 
@@ -388,19 +374,16 @@ def main ():
                          help='logging level')
     parser.add_argument ('--test', action='store_true',
                          help='only generate file but do not run batch process')
-    parser.add_argument ('--config', required=True, type=argparse.FileType('r'),
+    parser.add_argument ('--config', required=True,
                          help='configuration file (mandatory)')
 
     args = parser.parse_args ()
 
     numeric_level = getattr(logging, args.log.upper(), None)
-    logging.basicConfig(format='%(name)s - %(levelname)s: %(message)s', level=numeric_level)
+    logging.basicConfig(format='[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s', level=numeric_level)
 
-    print (args.log, numeric_level)
-
-    # logger = logging.getLogger (__name__)
-    # logger.info ('Parsing ' + args.config + ' config file')
-    # print "NOTICE: qsubmit::main: Parsing", config_file, "config file"
+    logger = logging.getLogger ()
+    logger.info ('Parsing ' + args.config + ' config file')
 
     # Read the config file:
     a_setup = BaseSetup ()
