@@ -4,7 +4,7 @@
 # Copyright: 2012 (C) NEMO - LAL (IN2P3/CNRS)
 
 import os, sys
-# import subprocess
+import subprocess
 # import getopt, ConfigParser
 import datetime
 import configparser
@@ -13,21 +13,10 @@ import argparse
 
 class BaseSetup:
     def __init__ (self):
-        self._test_             = False
-        self._default_setup_    = ""
-        self._cadfael_version_  = "pro"
-        self._bayeux_version_   = "trunk"
-        self._channel_version_  = "trunk"
-        self._falaise_version_  = "trunk"
-        self._pre_command_      = ""
-        self._run_command_      = ""
-        self._post_command_     = ""
-        self._nbr_jobs_         = 0
-        self._script_directory_ = ""
-        self._script_prefix_    = ""
-        self._script_extension_ = ".sh"
-        self._script_           = ""
-        self._logger_ = logging.getLogger ()
+        self._test_          = False
+        self._default_setup_ = ""
+        self._script_        = ""
+        self._logger_        = logging.getLogger ()
 
     def _parse (self, config_file_):
         a_config = configparser.ConfigParser ()
@@ -40,19 +29,33 @@ class BaseSetup:
             raise ValueError ('Default setup ' + self._default_setup_ + ' is not supported !')
         self._logger_.debug ('Default setup is ' + self._default_setup_)
 
-        # Get software version :
-        self._cadfael_version_ = a_config['config']['cadfael_version']
-        self._bayeux_version_  = a_config['config']['bayeux_version']
-        self._channel_version_ = a_config['config']['channel_version']
-        self._falaise_version_ = a_config['config']['falaise_version']
+        # Get software script :
+        self._cadfael_script_ = a_config['config'].get ('cadfael_script', fallback='')
+        self._bayeux_script_  = a_config['config'].get ('bayeux_script' , fallback='')
+        self._channel_script_ = a_config['config'].get ('channel_script', fallback='')
+        self._falaise_script_ = a_config['config'].get ('falaise_script', fallback='')
+        self._logger_.debug ('Cadfael script = ' + self._cadfael_script_)
+        self._logger_.debug ('Bayeux  script = ' + self._bayeux_script_)
+        self._logger_.debug ('Channel script = ' + self._channel_script_)
+        self._logger_.debug ('Falaise script = ' + self._falaise_script_)
+        # or software directory :
+        self._cadfael_directory_ = a_config['config'].get ('cadfael_directory', fallback='')
+        self._bayeux_directory_  = a_config['config'].get ('bayeux_directory' , fallback='')
+        self._channel_directory_ = a_config['config'].get ('channel_directory', fallback='')
+        self._falaise_directory_ = a_config['config'].get ('falaise_directory', fallback='')
+        self._logger_.debug ('Cadfael directory = ' + self._cadfael_directory_)
+        self._logger_.debug ('Bayeux  directory = ' + self._bayeux_directory_)
+        self._logger_.debug ('Channel directory = ' + self._channel_directory_)
+        self._logger_.debug ('Falaise directory = ' + self._falaise_directory_)
 
-        if not self._check_version ():
-            raise ValueError ('Checking software version fails!')
-
-        self._logger_.debug ('Cadfael version = ' + self._cadfael_version_)
-        self._logger_.debug ('Bayeux  version = ' + self._bayeux_version_)
-        self._logger_.debug ('Channel version = ' + self._channel_version_)
-        self._logger_.debug ('Falaise version = ' + self._falaise_version_)
+        if not self._cadfael_script_ and not self._cadfael_directory_:
+            raise ValueError ('No Cadfael script nor directory have been set !')
+        if not self._bayeux_script_ and not self._bayeux_directory_:
+            raise ValueError ('No Bayeux script nor directory have been set !')
+        if not self._channel_script_ and not self._channel_directory_:
+            raise ValueError ('No Channel script nor directory have been set !')
+        if not self._falaise_script_ and not self._falaise_directory_:
+            raise ValueError ('No Falaise script nor directory have been set !')
 
         if self._default_setup_ in "lyon":
             # Get job resources parameters:
@@ -70,9 +73,9 @@ class BaseSetup:
             self._logger_.debug ('Space size value = ' + str (self._space_size_))
 
         # Getting commands to be executed:
-        self._pre_command_  = a_config['command'].get ('pre_command')
-        self._run_command_  = a_config['command'].get ('run_command')
-        self._post_command_ = a_config['command'].get ('post_command')
+        self._pre_command_  = a_config['command'].get ('pre_command',  fallback='')
+        self._run_command_  = a_config['command'].get ('run_command',  fallback='')
+        self._post_command_ = a_config['command'].get ('post_command', fallback='')
         self._logger_.debug ('Pre command  = ' + self._pre_command_)
         self._logger_.debug ('Run command  = ' + self._run_command_)
         self._logger_.debug ('Post command = ' + self._post_command_)
@@ -80,29 +83,14 @@ class BaseSetup:
         # # Getting jobs setup:
         # sdir = a_config.get ("jobs", "script_directory")
         # self._script_directory_ = os.path.expandvars (sdir)
-        self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs')
-        self._script_directory_ = a_config['jobs'].get ('script_directory')
-        self._script_prefix_    = a_config['jobs'].get ('script_prefix')
-        self._script_extension_ = a_config['jobs'].get ('script_extension')
+        self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs',         fallback=0)
+        self._script_directory_ = a_config['jobs'].get ('script_directory', fallback='')
+        self._script_prefix_    = a_config['jobs'].get ('script_prefix',    fallback='')
+        self._script_extension_ = a_config['jobs'].get ('script_extension', fallback='.sh')
         self._logger_.debug ('Number of jobs   = ' + self._nbr_jobs_)
         self._logger_.debug ('Script prefix    = ' + self._script_prefix_)
         self._logger_.debug ('Script directory = ' + self._script_directory_)
         self._logger_.debug ('Script extension = ' + self._script_extension_)
-
-    def _check_version (self):
-        if self._cadfael_version_ and self._cadfael_version_ not in ("pro", "trunk"):
-            self._logger_.error ('Cadfael version ' + self._cadfael_version_ + ' is unkown')
-            return False
-        if self._bayeux_version_ and self._bayeux_version_ not in ("pro", "trunk"):
-            self._logger_.error ('Bayeux version ' + self._bayeux_version_ + ' is unkown')
-            return False
-        if self._channel_version_ and self._channel_version_ not in ("pro", "trunk"):
-            self._logger_.error ('Channel version ' + self._channel_version_ + ' is unkown')
-            return False
-        if self._falaise_version_ and self._falaise_version_ not in ("pro", "trunk"):
-            self._logger_.error ('Falaise version ' + self._falaise_version_ + ' is unkown')
-            return False
-        return True
 
     def _build_header (self):
         header = "#!/bin/bash" + os.linesep
@@ -123,9 +111,9 @@ class BaseSetup:
             header += "#$ -l sps="   + str (int (self._use_sps_))    + os.linesep
             header += "#$ -l xrootd="+ str (int (self._use_xrootd_)) + os.linesep
             header += "#$ -l ct="    + str (self._cpu_time_)         + os.linesep
-            header += "#$ -l vmem="  + str (self._memory_) + "G"     + os.linesep
+            header += "#$ -l vmem="  + str (self._memory_) + "M"     + os.linesep
             header += "#$ -l fsize=" + str (self._space_size_) + "G" + os.linesep
-
+        self._logger_.debug ('Header dump:' + header)
         self._script_ += header
 
 
@@ -142,125 +130,91 @@ class BaseSetup:
         footer += "##########################" + os.linesep
         self._script_ += footer
 
-#     def _build_commands (self):
-#         command  = os.linesep
-#         command += "##########################" + os.linesep
-#         command += os.linesep
-#         command += self._run_command_  + os.linesep
-#         command += self._post_command_ + os.linesep
-#         command += os.linesep
-#         command += "##########################" + os.linesep
-#         self._script_ += command
+    def _build_source (self):
+        # Define 'source' command:
+        cmd = "" + os.linesep
 
-#     def _build_source (self):
-#         nemo_base_dir_tmp = ""
-#         nemo_pro_dir_tmp  = ""
-#         nemo_dev_dir_tmp  = ""
+        # Setting setup file to be sourced:
+        if self._cadfael_script_:
+            cmd += 'source ' + self._cadfael_script_ + ' && do_cadfael_all_setup' + os.linesep
+        if self._bayeux_script_:
+            cmd += 'source ' + self._bayeux_script_ + ' && do_bayeux_all_setup' + os.linesep
+        if self._channel_script_:
+            cmd += 'source ' + self._channel_script_ + ' && do_channel_all_setup' + os.linesep
+        if self._falaise_script_:
+            cmd += 'source ' + self._falaise_script_ + ' && do_falaise_all_setup' + os.linesep
 
-#         cadfael_setup_file = ""
-#         bayeux_setup_file  = ""
-#         channel_setup_file = ""
-#         falaise_setup_file = ""
+        # Bayeux setup:
+        if not self._bayeux_script_:
+            # Things are getting more complicated in this case: order matters
+            components = [ 'datatools',
+                           'brio',
+                           'cuts',
+                           'mygsl',
+                           'geomtools',
+                           'genbb_help',
+                           'genvtx',
+                           'materials',
+                           'trackfit' ]
+            for icompo in components:
+                cmd += 'source ' + self._bayeux_directory_ + '/' + icompo + \
+                       '/__install*/etc/' + icompo.lower () + \
+                       '_setup.sh && do_' + icompo.lower () + '_setup' + os.linesep
 
-#         if self._default_setup_ in "lyon":
-#             nemo_base_dir_tmp = "/sps/nemo/scratch/garrido/workdir/"
-#             nemo_pro_dir_tmp  = nemo_base_dir_tmp + "/supernemo/snware"
-#             nemo_dev_dir_tmp  = nemo_base_dir_tmp + "/supernemo/development"
-#             cadfael_setup_file = nemo_pro_dir_tmp + \
-#                 "/cadfael/install/master/etc/cadfael_setup.sh"
-#         elif self._default_setup_ in "lal":
-#             nemo_base_dir_tmp = "/exp/nemo/snsw"
-#             nemo_pro_dir_tmp  = nemo_base_dir_tmp + "/supernemo/snware"
-#             nemo_dev_dir_tmp  = nemo_base_dir_tmp + "/supernemo/development"
-#             cadfael_setup_file = nemo_pro_dir_tmp + \
-#                 "/cadfael/cadfael/install/0.1.0/etc/cadfael_setup.sh"
-#         elif self._default_setup_ in "local":
-#             nemo_base_dir_tmp = "/home/garrido/Workdir/NEMO"
-#             nemo_pro_dir_tmp  = nemo_base_dir_tmp + "/supernemo/snware"
-#             nemo_dev_dir_tmp  = nemo_base_dir_tmp + "/supernemo/development"
-#             cadfael_setup_file = nemo_pro_dir_tmp + \
-#                 "/cadfael/cadfael/install/0.1.0/etc/cadfael_setup.sh"
+        # Channel setup:
+        if not self._channel_script_:
+            # Things are getting more complicated in this case: order matters
+            components = [ 'TrackerPreClustering',
+                           'CellularAutomatonTracker',
+                           'TrackerClusterPath' ]
+            for icompo in components:
+                cmd += 'source ' + self._channel_directory_ + '/' + icompo + \
+                       '/__install*/etc/' + icompo.lower () + \
+                       '_setup.sh && do_' + icompo.lower () + '_setup' + os.linesep
 
-#         # Define 'source' command:
-#         cmd = "" + os.linesep
+        # Falaise setup:
+        if not self._falaise_script_:
+            # Things are getting more complicated in this case: order matters
+            components = [ 'sngeometry',
+                           'sncore',
+                           'sngenvertex',
+                           'sngenbb',
+                           'sng4',
+                           'snreconstruction',
+                           'snvisualization',
+                           'snanalysis' ]
 
-#         # Setting setup file to be sourced:
-#         if not cadfael_setup_file:
-#             pass
-#         else:
-#             cmd += "source " + cadfael_setup_file + " && do_cadfael_all_setup" + os.linesep
+            for icompo in components:
+                cmd += 'source ' + self._falaise_directory_ + '/' + icompo + \
+                       '/__install*/etc/' + icompo.lower () + \
+                       '_setup.sh && do_' + icompo.lower () + '_setup' + os.linesep
 
-#         # Bayeux setup:
-#         if not bayeux_setup_file:
-#             if self._bayeux_version_ in "pro":
-#                 self._bayeux_version_ = "0.1.0"
-#                 bayeux_setup_file = nemo_pro_dir_tmp + "/bayeux/install/" \
-#                     + self._bayeux_version_ + "/etc/bayeux_setup.sh"
-#             elif self._bayeux_version_ in "trunk":
-#                 # Things are getting more complicated in this case: order matters
-#                 components = [ "datatools", "brio", "cuts", "mygsl", "geomtools", "genbb_help", "genvtx", "materials", "trackfit" ]
+        self._logger_.debug ('Source file dump:' + cmd)
+        self._script_ += cmd
 
-#                 for icompo in components:
-#                     cmd += "source " + nemo_dev_dir_tmp + "/bayeux/" + icompo + \
-#                         "/__install*/etc/" + icompo.lower () + \
-#                         "_setup.sh && do_" + icompo.lower () + "_setup" + os.linesep
-#         else:
-#             cmd += "source " + bayeux_setup_file + " && do_bayeux_all_setup" + os.linesep
-
-#         # Channel setup:
-#         if not channel_setup_file:
-#             if self._channel_version_ in "pro":
-#                 self._channel_version_ = "0.1.0"
-#                 channel_setup_file = nemo_pro_dir_tmp + "/channel/install/" \
-#                     + self._channel_version_ + "/etc/channel_setup.sh"
-#             elif self._channel_version_ in "trunk":
-#                 # Things are getting more complicated in this case: order matters
-#                 components = [ "TrackerPreClustering", "CellularAutomatonTracker", "TrackerClusterPath" ]
-
-#                 for icompo in components:
-#                     cmd += "source " + nemo_dev_dir_tmp + "/channel/" + icompo + \
-#                         "/__install*/etc/" + icompo.lower () + \
-#                         "_setup.sh && do_" + icompo.lower () + "_setup" + os.linesep
-#         else:
-#             cmd += "source " + channel_setup_file + " && do_channel_all_setup" + os.linesep
-
-#         # Falaise setup:
-#         if not falaise_setup_file:
-#             if self._falaise_version_ in "pro":
-#                 self._falaise_version_ = "0.1.0"
-#                 falaise_setup_file = nemo_pro_dir_tmp + "/falaise/install/" \
-#                     + self._falaise_version_ + "/etc/falaise_setup.sh"
-#             elif self._falaise_version_ in "trunk":
-#                 # Things are getting more complicated in this case: order matters
-#                 components = [ "sngeometry", "sncore", "sngenvertex", "sngenbb", "sng4", "snreconstruction", "snvisualization", "snanalysis" ]
-
-#                 for icompo in components:
-#                     cmd += "source " + nemo_dev_dir_tmp + "/falaise/" + icompo + \
-#                         "/__install*/etc/" + icompo.lower () + \
-#                         "_setup.sh && do_" + icompo.lower () + "_setup" + os.linesep
-#         else:
-#             cmd += "source " + _setup_file + " && do_falaise_all_setup" + os.linesep
-
-#         self._script_ += cmd
+    def _build_commands (self):
+        command  = os.linesep
+        command += '##########################' + os.linesep
+        command += os.linesep
+        command += self._run_command_  + os.linesep
+        command += self._post_command_ + os.linesep
+        command += os.linesep
+        command += '##########################' + os.linesep
+        self._logger_.debug ('Commands dump:' + command)
+        self._script_ += command
 
     def _build (self):
         # Create an header
         self._build_header ()
 
-        # # Source config
-        # self._build_source ()
+        # Source config
+        self._build_source ()
 
-        # # Commands
-        # self._build_commands ()
+        # Commands
+        self._build_commands ()
 
         # Create footer
         self._build_footer ()
-
-        print(self._script_)
-
-
-#     def _print (self):
-#         print self._script_
 
 #     def _replace_variable (self, job_number_ = -1):
 #         if job_number_ == -1:
@@ -270,17 +224,15 @@ class BaseSetup:
 #         local_script = self._script_
 #         self._script_ = local_script.replace ('@JOB_NUMBER@', str (job_number_))
 
-#     def _run_pre_command (self):
-#         if self._debug_:
-#             print "DEBUG: qsubmit::Setup::_run_pre_command: Pre command is", self._pre_command_
-#         print "NOTICE: qsubmit::Setup::_run_pre_command: Running 'pre-command'..."
-#         subprocess.call (self._pre_command_, shell=True)
+    def _run_pre_command (self):
+        self._logger_.debug ('Pre command is ' + self._pre_command_)
+        self._logger_.info ('Running \'pre-command\'...')
+        subprocess.call (self._pre_command_, shell=True)
 
-#     def _run_post_command (self):
-#         if self._debug_:
-#             print "DEBUG: qsubmit::Setup::_run_post_command: Post command is", self._post_command_
-#         print "NOTICE: qsubmit::Setup::_run_post_command: Running 'post-command'..."
-#         subprocess.call (self._post_command_, shell=True)
+    def _run_post_command (self):
+        self._logger_.debug ('Post command is ' + self._post_command_)
+        self._logger_.info ('Running \'post-command\'...')
+        subprocess.call (self._post_command_, shell=True)
 
     def _submit (self):
         self._logger_.info ('Generating ' + self._nbr_jobs_ + ' job(s) to ' + self._default_setup_)
@@ -288,8 +240,8 @@ class BaseSetup:
         # Build the script:
         self._build ()
 
-#         # Run precommand:
-#         self._run_pre_command ()
+        # Run precommand:
+        self._run_pre_command ()
 
 #         for ijob in range (int (self._nbr_jobs_)):
 #             if not os.path.exists (self._script_directory_):
@@ -327,20 +279,10 @@ class BaseSetup:
 #                 else:
 #                     print "NOTICE: qsubmit::Setup::_submit: Mode test"
 
-#         # Run postcommand:
-#         self._run_post_command ()
+        # Run postcommand:
+        self._run_post_command ()
 
-
-class LyonSetup (BaseSetup):
-    def __init__ (self):
-        self._use_hpss_         = 0
-        self._use_sps_          = 0
-        self._use_xrootd_       = 0
-        self._cpu_time_         = ""
-        self._memory_           = ""
-        self._space_size_       = ""
-
-# main function:
+# Main function:
 def main ():
 
     parser = argparse.ArgumentParser (description='A python script for running SuperNEMO batch simulations')
