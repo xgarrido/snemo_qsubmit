@@ -6,14 +6,15 @@
 import os, sys
 import subprocess
 # import getopt, ConfigParser
+import time
 import datetime
 import configparser
 import logging
 import argparse
 
 class BaseSetup:
-    def __init__ (self):
-        self._test_          = False
+    def __init__ (self, test_ = False):
+        self._test_          = test_
         self._default_setup_ = ""
         self._script_        = ""
         self._logger_        = logging.getLogger ()
@@ -243,41 +244,40 @@ class BaseSetup:
         # Run precommand:
         self._run_pre_command ()
 
-#         for ijob in range (int (self._nbr_jobs_)):
-#             if not os.path.exists (self._script_directory_):
-#                 os.makedirs (self._script_directory_)
+        for ijob in range (int (self._nbr_jobs_)):
+            self._logger_.info ('Submiting job #' + str (ijob), '...')
 
-#             # Replacing prefixed variable with @XXX@ label
-#             self._replace_variable (ijob)
+            if not os.path.exists (self._script_directory_):
+                os.makedirs (self._script_directory_)
 
-#             a_job_name        = self._script_prefix_ + "_" + str (ijob)
-#             a_script_filename = self._script_directory_ + "/" + \
-#                 a_job_name + self._script_extension_
+            # # Replacing prefixed variable with @XXX@ label
+            # self._replace_variable (ijob)
 
-#             a_script_file = open (a_script_filename, 'w')
-#             a_script_file.write (self._script_)
-#             a_script_file.close ()
+            a_job_name        = self._script_prefix_ + "_" + str (ijob)
+            a_script_filename = self._script_directory_ + "/" + \
+                a_job_name + self._script_extension_
 
-#             # Change file right permission to make it executable
-#             os.chmod (a_script_filename, 0755)
+            a_script_file = open (a_script_filename, 'w')
+            a_script_file.write (self._script_)
+            a_script_file.close ()
 
-#             if self._default_setup_ in "lyon":
-#                 print "NOTICE: qsubmit::Setup::_submit: Submiting job #" + str (ijob), "..."
+            # Change file right permission to make it executable
+            os.chmod (a_script_filename, 755)
 
-#                 qsub_cmd = "qsub -j y -P P_nemo"       \
-#                     + " -N " + a_job_name              \
-#                     + " -o " + self._script_directory_ \
-#                     + " " + a_script_filename
+            if self._default_setup_ in "lyon":
+                qsub_cmd = "qsub -j y -P P_nemo"       \
+                    + " -N " + a_job_name              \
+                    + " -o " + self._script_directory_ \
+                    + " " + a_script_filename
 
-#                 if self._debug_:
-#                     print "DEBUG: qsubmit::Setup::_submit: qsub command = " + qsub_cmd
+                self._logger_.debug ('qsub command = ' + qsub_cmd)
 
-#                 if not self._test_ :
-#                     subprocess.call (qsub_cmd, shell=True)
-#                     # This prevent same seed (fixed now by F. Mauger)
-#                     time.sleep (1)
-#                 else:
-#                     print "NOTICE: qsubmit::Setup::_submit: Mode test"
+                if not self._test_:
+                    subprocess.call (qsub_cmd, shell=True)
+                    # This prevent same seed (fixed now by F. Mauger)
+                    time.sleep (1)
+                else:
+                    self._logger_.info ('Mode test')
 
         # Run postcommand:
         self._run_post_command ()
@@ -304,8 +304,7 @@ def main ():
     logger.info ('Parsing ' + args.config + ' config file')
 
     # Read the config file:
-    a_setup = BaseSetup ()
-    # a_setup._set_test (test)
+    a_setup = BaseSetup (args.test)
     a_setup._parse (args.config)
 
     # Run jobs:
