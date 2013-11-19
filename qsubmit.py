@@ -6,7 +6,7 @@
 import os, sys
 # import subprocess
 # import getopt, ConfigParser
-# import datetime, time
+import datetime
 import configparser
 import logging
 import argparse
@@ -69,26 +69,25 @@ class BaseSetup:
             self._logger_.debug ('Memory value     = ' + str (self._memory_))
             self._logger_.debug ('Space size value = ' + str (self._space_size_))
 
-        # # Getting commands to be executed:
-        # self._pre_command_  = a_config.get ("command", "pre_command")
-        # self._run_command_  = a_config.get ("command", "run_command")
-        # self._post_command_ = a_config.get ("command", "post_command")
-        # if self._debug_:
-        #     print "DEBUG: qsubmit::Setup::_parse: Pre command  =", self._pre_command_
-        #     print "DEBUG: qsubmit::Setup::_parse: Run command  =", self._run_command_
-        #     print "DEBUG: qsubmit::Setup::_parse: Post command =", self._post_command_
+        # Getting commands to be executed:
+        self._pre_command_  = a_config['command'].get ('pre_command')
+        self._run_command_  = a_config['command'].get ('run_command')
+        self._post_command_ = a_config['command'].get ('post_command')
+        self._logger_.debug ('Pre command  = ' + self._pre_command_)
+        self._logger_.debug ('Run command  = ' + self._run_command_)
+        self._logger_.debug ('Post command = ' + self._post_command_)
 
         # # Getting jobs setup:
         # sdir = a_config.get ("jobs", "script_directory")
         # self._script_directory_ = os.path.expandvars (sdir)
-        # self._nbr_jobs_         = a_config.get ("jobs", "nbr_jobs")
-        # self._script_prefix_    = a_config.get ("jobs", "script_prefix")
-        # self._script_extension_ = a_config.get ("jobs", "script_extension")
-        # if self._debug_:
-        #     print "DEBUG: qsubmit::Setup::_parse: Number of jobs   =", self._nbr_jobs_
-        #     print "DEBUG: qsubmit::Setup::_parse: Script prefix    =", self._script_prefix_
-        #     print "DEBUG: qsubmit::Setup::_parse: Script directory =", self._script_directory_
-        #     print "DEBUG: qsubmit::Setup::_parse: Script extension =", self._script_extension_
+        self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs')
+        self._script_directory_ = a_config['jobs'].get ('script_directory')
+        self._script_prefix_    = a_config['jobs'].get ('script_prefix')
+        self._script_extension_ = a_config['jobs'].get ('script_extension')
+        self._logger_.debug ('Number of jobs   = ' + self._nbr_jobs_)
+        self._logger_.debug ('Script prefix    = ' + self._script_prefix_)
+        self._logger_.debug ('Script directory = ' + self._script_directory_)
+        self._logger_.debug ('Script extension = ' + self._script_extension_)
 
     def _check_version (self):
         if self._cadfael_version_ and self._cadfael_version_ not in ("pro", "trunk"):
@@ -105,54 +104,29 @@ class BaseSetup:
             return False
         return True
 
-#     def _build_header (self):
-#         current_date = datetime.datetime.now ()
-#         header  = "#!/bin/bash" + os.linesep
-#         header += os.linesep
-#         header += "##########################" + os.linesep
-#         header += "#"
-#         header += "    " + current_date.strftime ("%Y-%m-%d %H:%M") + "    "
-#         header += "#"
-#         header += os.linesep
-#         header += "##########################" + os.linesep
+    def _build_header (self):
+        header  = "#!/bin/bash" + os.linesep
+        header += os.linesep
+        header += "##########################" + os.linesep
+        header += "#"
+        header += "    " + datetime.datetime.now ().strftime ("%Y-%m-%d %H:%M") + "    "
+        header += "#"
+        header += os.linesep
+        header += "##########################" + os.linesep
 
-#         if self._default_setup_ in "lyon":
-#             use_hpss = 0
-#             if self._use_hpss_ in ("True", "true", "1"):
-#                 use_hpss = 1
-#             elif self._use_hpss_ in ("False", "false", "0"):
-#                 use_hpss = 0
-#             else:
-#                 print "WARNING: qsubmit::Setup::_submit: 'use_hpss' variable must be True/False"
+        if self._default_setup_ in "lyon":
+            header += os.linesep + "# ccage options"                 + os.linesep
+            # header += "#$ -j y"                                      + os.linesep
+            # header += "#$ -P P_nemo"                                 + os.linesep
+            header += "#$ -m be"                                     + os.linesep
+            header += "#$ -l hpss="  + str (int (self._use_hpss_))   + os.linesep
+            header += "#$ -l sps="   + str (int (self._use_sps_))    + os.linesep
+            header += "#$ -l xrootd="+ str (int (self._use_xrootd_)) + os.linesep
+            header += "#$ -l ct="    + str (self._cpu_time_)         + os.linesep
+            header += "#$ -l vmem="  + str (self._memory_) + "G"     + os.linesep
+            header += "#$ -l fsize=" + str (self._space_size_) + "G" + os.linesep
 
-#             use_sps = 0
-#             if self._use_sps_ in ("True", "true", "1"):
-#                 use_sps = 1
-#             elif self._use_sps_ in ("False", "false", "0"):
-#                 use_sps = 0
-#             else:
-#                 print "WARNING: qsubmit::Setup::_submit: 'use_sps' variable must be True/False"
-
-#             use_xrootd = 0
-#             if self._use_xrootd_ in ("True", "true", "1"):
-#                 use_xrootd = 1
-#             elif self._use_xrootd_ in ("False", "false", "0"):
-#                 use_xrootd = 0
-#             else:
-#                 print "WARNING: qsubmit::Setup::_submit: 'use_xrootd' variable must be True/False"
-
-#             header += os.linesep + "# ccage options"                 + os.linesep
-#             # header += "#$ -j y"                                      + os.linesep
-#             # header += "#$ -P P_nemo"                                 + os.linesep
-#             header += "#$ -m be"                                     + os.linesep
-#             header += "#$ -l hpss="  + str (use_hpss)                + os.linesep
-#             header += "#$ -l sps="   + str (use_sps)                 + os.linesep
-#             header += "#$ -l xrootd="+ str (use_xrootd)              + os.linesep
-#             header += "#$ -l ct="    + str (self._cpu_time_)         + os.linesep
-#             header += "#$ -l vmem="  + str (self._memory_) + "G"     + os.linesep
-#             header += "#$ -l fsize=" + str (self._space_size_) + "G" + os.linesep
-
-#         self._script_ += header
+        self._script_ += header
 
 
 #     def _build_footer (self):
@@ -269,18 +243,18 @@ class BaseSetup:
 
 #         self._script_ += cmd
 
-#     def _build (self):
-#         # Create an header
-#         self._build_header ()
+    def _build (self):
+        # Create an header
+        self._build_header ()
 
-#         # Source config
-#         self._build_source ()
+        # # Source config
+        # self._build_source ()
 
-#         # Commands
-#         self._build_commands ()
+        # # Commands
+        # self._build_commands ()
 
-#         # Create footer
-#         self._build_footer ()
+        # # Create footer
+        # self._build_footer ()
 
 #     def _print (self):
 #         print self._script_
@@ -305,12 +279,11 @@ class BaseSetup:
 #         print "NOTICE: qsubmit::Setup::_run_post_command: Running 'post-command'..."
 #         subprocess.call (self._post_command_, shell=True)
 
-#     def _submit (self):
-#         print "NOTICE: qsubmit::Setup::_submit: Generating", self._nbr_jobs_, \
-#             "job(s) to '" + self._default_setup_ + "'"
+    def _submit (self):
+        self._logger_.info ('Generating ' + self._nbr_jobs_ + ' job(s) to ' + self._default_setup_)
 
-#         # Build the script:
-#         self._build ()
+        # Build the script:
+        self._build ()
 
 #         # Run precommand:
 #         self._run_pre_command ()
@@ -390,8 +363,8 @@ def main ():
     # a_setup._set_test (test)
     a_setup._parse (args.config)
 
-    # # Run jobs:
-    # a_setup._submit ()
+    # Run jobs:
+    a_setup._submit ()
 
 # script:
 if __name__ == "__main__":
