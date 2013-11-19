@@ -245,7 +245,7 @@ class BaseSetup:
         self._run_pre_command ()
 
         for ijob in range (int (self._nbr_jobs_)):
-            self._logger_.info ('Submiting job #' + str (ijob), '...')
+            self._logger_.info ('Submiting job #' + str (ijob) + '...')
 
             if not os.path.exists (self._script_directory_):
                 os.makedirs (self._script_directory_)
@@ -298,7 +298,8 @@ def main ():
     args = parser.parse_args ()
 
     numeric_level = getattr(logging, args.log.upper(), None)
-    logging.basicConfig(format='[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s', level=numeric_level)
+    logging.basicConfig(format='[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s',
+                        level=numeric_level)
 
     logger = logging.getLogger ()
     logger.info ('Parsing ' + args.config + ' config file')
