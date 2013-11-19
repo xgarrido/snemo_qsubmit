@@ -105,7 +105,7 @@ class BaseSetup:
         return True
 
     def _build_header (self):
-        header  = "#!/bin/bash" + os.linesep
+        header = "#!/bin/bash" + os.linesep
         header += os.linesep
         header += "##########################" + os.linesep
         header += "#"
@@ -129,18 +129,18 @@ class BaseSetup:
         self._script_ += header
 
 
-#     def _build_footer (self):
-#         footer = os.linesep
-#         footer += "##########################" + os.linesep
-#         footer += os.linesep
-#         footer += "cat << EOF" + os.linesep
-#         footer += os.linesep
-#         footer += self._script_
-#         footer += os.linesep
-#         footer += "EOF" + os.linesep
-#         footer += os.linesep
-#         footer += "##########################" + os.linesep
-#         self._script_ += footer
+    def _build_footer (self):
+        footer = os.linesep
+        footer += "##########################" + os.linesep
+        footer += os.linesep
+        footer += "cat << EOF" + os.linesep
+        footer += os.linesep
+        footer += self._script_
+        footer += os.linesep
+        footer += "EOF" + os.linesep
+        footer += os.linesep
+        footer += "##########################" + os.linesep
+        self._script_ += footer
 
 #     def _build_commands (self):
 #         command  = os.linesep
@@ -253,8 +253,11 @@ class BaseSetup:
         # # Commands
         # self._build_commands ()
 
-        # # Create footer
-        # self._build_footer ()
+        # Create footer
+        self._build_footer ()
+
+        print(self._script_)
+
 
 #     def _print (self):
 #         print self._script_
