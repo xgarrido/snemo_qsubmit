@@ -26,45 +26,39 @@ import logging
 import argparse
 import paramiko
 
+USERNAME = 'garrido'
+PASSWORD = 'lol'
+
 class BaseSetup:
     """Base class for defining configuration setup"""
     def __init__ (self, test_ = False):
-        self._test_          = test_
-        self._default_setup_ = ""
-        self._script_        = ""
-        self._logger_        = logging.getLogger ()
-
-    def set_username (self, username_ = ''):
-        """Setting the username to be used for remote connection"""
-        self._username_ = username_
-
-    def set_password (self, password_ = ''):
-        """Setting the password to be used for remote connection"""
-        self._password_ = password_
+        self._test_   = test_
+        self._logger_ = logging.getLogger ()
+        self._script_ = ''
 
     def parse (self, config_file_):
         """Parsing the configuration file with configparser object"""
         a_config = configparser.ConfigParser ()
         a_config.read (config_file_)
 
-        # Get hostname :
-        self._hostname_ = a_config['config']['hostname']
-        self._logger_.debug ('Hostname is ' + self._hostname_)
+        # Get setup :
+        self._default_setup_ = a_config['config']['default_setup']
+        self._logger_.debug ('Default setup is ' + self._default_setup_)
 
         # Get software script :
-        self._cadfael_script_ = a_config['config'].get ('cadfael_script', fallback = '')
-        self._bayeux_script_  = a_config['config'].get ('bayeux_script' , fallback = '')
-        self._channel_script_ = a_config['config'].get ('channel_script', fallback = '')
-        self._falaise_script_ = a_config['config'].get ('falaise_script', fallback = '')
+        self._cadfael_script_ = a_config['config'].get ('cadfael_script', fallback='')
+        self._bayeux_script_  = a_config['config'].get ('bayeux_script' , fallback='')
+        self._channel_script_ = a_config['config'].get ('channel_script', fallback='')
+        self._falaise_script_ = a_config['config'].get ('falaise_script', fallback='')
         self._logger_.debug ('Cadfael script = ' + self._cadfael_script_)
         self._logger_.debug ('Bayeux  script = ' + self._bayeux_script_)
         self._logger_.debug ('Channel script = ' + self._channel_script_)
         self._logger_.debug ('Falaise script = ' + self._falaise_script_)
         # or software directory :
-        self._cadfael_directory_ = a_config['config'].get ('cadfael_directory', fallback = '')
-        self._bayeux_directory_  = a_config['config'].get ('bayeux_directory' , fallback = '')
-        self._channel_directory_ = a_config['config'].get ('channel_directory', fallback = '')
-        self._falaise_directory_ = a_config['config'].get ('falaise_directory', fallback = '')
+        self._cadfael_directory_ = a_config['config'].get ('cadfael_directory', fallback='')
+        self._bayeux_directory_  = a_config['config'].get ('bayeux_directory' , fallback='')
+        self._channel_directory_ = a_config['config'].get ('channel_directory', fallback='')
+        self._falaise_directory_ = a_config['config'].get ('falaise_directory', fallback='')
         self._logger_.debug ('Cadfael directory = ' + self._cadfael_directory_)
         self._logger_.debug ('Bayeux  directory = ' + self._bayeux_directory_)
         self._logger_.debug ('Channel directory = ' + self._channel_directory_)
@@ -79,14 +73,14 @@ class BaseSetup:
         if not self._falaise_script_ and not self._falaise_directory_:
             raise ValueError ('No Falaise script nor directory have been set !')
 
-        if self._default_setup_ in "lyon":
+        if self._default_setup_ in 'lyon':
             # Get job resources parameters:
-            self._use_hpss_   = a_config['resources'].getboolean ('use_hpss',   fallback = False)
-            self._use_sps_    = a_config['resources'].getboolean ('use_sps',    fallback = False)
-            self._use_xrootd_ = a_config['resources'].getboolean ('use_xrootd', fallback = False)
-            self._memory_     = a_config['resources'].getfloat ('memory',       fallback = 0.0)
-            self._cpu_time_   = a_config['resources'].get ('cpu_time',          fallback = '00:00:00')
-            self._space_size_ = a_config['resources'].getfloat ('space_size',   fallback = 0.0)
+            self._use_hpss_   = a_config['resources'].getboolean ('use_hpss',   fallback=False)
+            self._use_sps_    = a_config['resources'].getboolean ('use_sps',    fallback=False)
+            self._use_xrootd_ = a_config['resources'].getboolean ('use_xrootd', fallback=False)
+            self._memory_     = a_config['resources'].getfloat ('memory',       fallback=0.0)
+            self._cpu_time_   = a_config['resources'].get ('cpu_time',          fallback='00:00:00')
+            self._space_size_ = a_config['resources'].getfloat ('space_size',   fallback=0.0)
             self._logger_.debug ('Use HPSS         = ' + str (self._use_hpss_))
             self._logger_.debug ('Use SPS          = ' + str (self._use_sps_))
             self._logger_.debug ('Use xrootd       = ' + str (self._use_xrootd_))
@@ -95,66 +89,64 @@ class BaseSetup:
             self._logger_.debug ('Space size value = ' + str (self._space_size_))
 
         # Getting commands to be executed:
-        self._pre_command_  = a_config['command'].get ('pre_command',  fallback = '')
-        self._run_command_  = a_config['command'].get ('run_command',  fallback = '')
-        self._post_command_ = a_config['command'].get ('post_command', fallback = '')
+        self._pre_command_  = a_config['command'].get ('pre_command',  fallback='')
+        self._run_command_  = a_config['command'].get ('run_command',  fallback='')
+        self._post_command_ = a_config['command'].get ('post_command', fallback='')
         self._logger_.debug ('Pre command  = ' + self._pre_command_)
         self._logger_.debug ('Run command  = ' + self._run_command_)
         self._logger_.debug ('Post command = ' + self._post_command_)
 
         # # Getting jobs setup:
-        # sdir = a_config.get ("jobs", "script_directory")
-        # self._script_directory_ = os.path.expandvars (sdir)
-        self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs',         fallback = 0)
-        self._script_directory_ = a_config['jobs'].get ('script_directory', fallback = '')
-        self._script_prefix_    = a_config['jobs'].get ('script_prefix',    fallback = '')
-        self._script_extension_ = a_config['jobs'].get ('script_extension', fallback = '.sh')
+        self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs',         fallback=0)
+        self._script_directory_ = a_config['jobs'].get ('script_directory', fallback='')
+        self._script_prefix_    = a_config['jobs'].get ('script_prefix',    fallback='')
+        self._script_extension_ = a_config['jobs'].get ('script_extension', fallback='.sh')
         self._logger_.debug ('Number of jobs   = ' + self._nbr_jobs_)
         self._logger_.debug ('Script prefix    = ' + self._script_prefix_)
         self._logger_.debug ('Script directory = ' + self._script_directory_)
         self._logger_.debug ('Script extension = ' + self._script_extension_)
 
     def _build_header (self):
-        header = "#!/bin/bash" + os.linesep
+        header = '#!/bin/bash' + os.linesep
         header += os.linesep
-        header += "##########################" + os.linesep
-        header += "#"
-        header += "    " + datetime.datetime.now ().strftime ("%Y-%m-%d %H:%M") + "    "
-        header += "#"
+        header += '##########################' + os.linesep
+        header += '#'
+        header += '    ' + datetime.datetime.now ().strftime ('%Y-%m-%d %H:%M') + '    '
+        header += '#'
         header += os.linesep
-        header += "##########################" + os.linesep
+        header += '##########################' + os.linesep
 
-        if self._default_setup_ in "lyon":
-            header += os.linesep + "# ccage options"                 + os.linesep
-            # header += "#$ -j y"                                      + os.linesep
-            # header += "#$ -P P_nemo"                                 + os.linesep
-            header += "#$ -m be"                                     + os.linesep
-            header += "#$ -l hpss="  + str (int (self._use_hpss_))   + os.linesep
-            header += "#$ -l sps="   + str (int (self._use_sps_))    + os.linesep
-            header += "#$ -l xrootd="+ str (int (self._use_xrootd_)) + os.linesep
-            header += "#$ -l ct="    + str (self._cpu_time_)         + os.linesep
-            header += "#$ -l vmem="  + str (self._memory_) + "M"     + os.linesep
-            header += "#$ -l fsize=" + str (self._space_size_) + "G" + os.linesep
+        if self._default_setup_ in 'lyon':
+            header += os.linesep + '# ccage options'                 + os.linesep
+            # header += '#$ -j y'                                      + os.linesep
+            # header += '#$ -P P_nemo'                                 + os.linesep
+            header += '#$ -m be'                                     + os.linesep
+            header += '#$ -l hpss='  + str (int (self._use_hpss_))   + os.linesep
+            header += '#$ -l sps='   + str (int (self._use_sps_))    + os.linesep
+            header += '#$ -l xrootd='+ str (int (self._use_xrootd_)) + os.linesep
+            header += '#$ -l ct='    + str (self._cpu_time_)         + os.linesep
+            header += '#$ -l vmem='  + str (self._memory_) + 'M'     + os.linesep
+            header += '#$ -l fsize=' + str (self._space_size_) + 'G' + os.linesep
         self._logger_.debug ('Header dump:' + header)
         self._script_ += header
 
 
     def _build_footer (self):
         footer = os.linesep
-        footer += "##########################" + os.linesep
+        footer += '##########################' + os.linesep
         footer += os.linesep
-        footer += "cat << EOF" + os.linesep
+        footer += 'cat << EOF' + os.linesep
         footer += os.linesep
         footer += self._script_
         footer += os.linesep
-        footer += "EOF" + os.linesep
+        footer += 'EOF' + os.linesep
         footer += os.linesep
-        footer += "##########################" + os.linesep
+        footer += '##########################' + os.linesep
         self._script_ += footer
 
     def _build_source (self):
         # Define 'source' command:
-        cmd = "" + os.linesep
+        cmd = '' + os.linesep
 
         # Setting setup file to be sourced:
         if self._cadfael_script_:
@@ -218,6 +210,7 @@ class BaseSetup:
         command  = os.linesep
         command += '##########################' + os.linesep
         command += os.linesep
+        command += self._pre_command_  + os.linesep
         command += self._run_command_  + os.linesep
         command += self._post_command_ + os.linesep
         command += os.linesep
@@ -246,55 +239,60 @@ class BaseSetup:
 #         local_script = self._script_
 #         self._script_ = local_script.replace ('@JOB_NUMBER@', str (job_number_))
 
-    def _run_pre_command (self):
-        self._logger_.debug ('Pre command is ' + self._pre_command_)
-        self._logger_.info ('Running \'pre-command\'...')
-        subprocess.call (self._pre_command_, shell=True)
-
-    def _run_post_command (self):
-        self._logger_.debug ('Post command is ' + self._post_command_)
-        self._logger_.info ('Running \'post-command\'...')
-        subprocess.call (self._post_command_, shell=True)
-
     def submit (self):
         self._logger_.info ('Generating ' + self._nbr_jobs_ + ' job(s) to ' + self._default_setup_)
 
         # Build the script:
         self._build ()
 
-        # Run precommand:
-        self._run_pre_command ()
-
         for ijob in range (int (self._nbr_jobs_)):
             self._logger_.info ('Submiting job #' + str (ijob) + '...')
-
-            if not os.path.exists (self._script_directory_):
-                os.makedirs (self._script_directory_)
 
             # # Replacing prefixed variable with @XXX@ label
             # self._replace_variable (ijob)
 
-            job_name        = self._script_prefix_ + '_' + str (ijob)
-            script_file_name = job_name + self._script_extension_
-            script_file_directory = self._script_directory_ + '/' + script_file_name
+            # Expand path
+            self._script_directory_ = os.path.expandvars (self._script_directory_)
+            self._logger_.debug ('Script directory is ' + self._script_directory_)
 
-            script_file = open (script_file_directory, 'w')
+            # Temporary directory for storing script file
+            tmp_dir = os.path.expandvars ('/tmp/${USER}/qsubmit.d')
+            if not os.path.exists (tmp_dir):
+                os.makedirs (tmp_dir)
+
+            job_name         = self._script_prefix_ + '_' + str (ijob)
+            script_file_name = job_name + self._script_extension_
+            script_tmp_path  = tmp_dir + '/' + script_file_name
+
+            script_file = open (script_tmp_path, 'w')
             script_file.write (self._script_)
             script_file.close ()
 
-            if self._default_setup_ in "lyon":
+            if self._default_setup_ in 'lyon':
+                remote_file_path = self._script_directory_ + '/' + script_file_name
                 try:
                     client = paramiko.SSHClient ()
                     client.load_system_host_keys ()
-                    client.set_missing_host_key_policy (paramiko.WarningPolicy())
+                    client.set_missing_host_key_policy (paramiko.WarningPolicy ())
                     self._logger_.info ('Connecting to ccage.in2p3.fr...')
-                    client.connect (hostname=self._hostname_, username=self._username_, password=self._password_)
-                    remote_path = '/tmp/garrido/qsubmit.d'
-                    client.exec_command ('mkdir -p ' + remote_path)
+                    client.connect (hostname='ccage029.in2p3.fr',
+                                    username=USERNAME,
+                                    password=PASSWORD)
+                    client.exec_command ('mkdir -p ' + self._script_directory_)
                     sftp = client.open_sftp ()
-                    sftp.put (script_file_directory, remote_path + '/' + script_file_name)
+                    self._logger_.debug ('Copying file ' + script_tmp_path + ' to ' + remote_file_path)
+                    sftp.put (script_tmp_path, remote_file_path)
                     sftp.close ()
-                    client.exec_command ('chmod 755 %s/%s' % (remote_path, script_file_name))
+                    client.exec_command ('chmod 755 ' + remote_file_path)
+                    if not self._test_:
+                        qsub_cmd = 'qsub -j y -P P_nemo'              \
+                                   + ' -N ' + job_name                \
+                                   + ' -o ' + self._script_directory_ \
+                                   + ' ' + remote_file_path
+                        self._logger_.debug ('qsub command = ' + qsub_cmd)
+                        client.exec_command (qsub_cmd)
+                    else:
+                        self._logger_.debug ('This is test mode')
                 except Exception as e:
                     self._logger_.error ('Caught exception: %s %s' % (e.__class__, e))
                     try:
@@ -302,23 +300,6 @@ class BaseSetup:
                     except:
                         pass
                         sys.exit(1)
-
-                        # qsub_cmd = "qsub -j y -P P_nemo"       \
-                #     + " -N " + a_job_name              \
-                #     + " -o " + self._script_directory_ \
-                #     + " " + a_script_filename
-
-                # self._logger_.debug ('qsub command = ' + qsub_cmd)
-
-                # if not self._test_:
-                #     subprocess.call (qsub_cmd, shell=True)
-                #     # This prevent same seed (fixed now by F. Mauger)
-                #     time.sleep (1)
-                # else:
-                #     self._logger_.info ('Mode test')
-
-        # Run postcommand:
-        self._run_post_command ()
 
 # Main function:
 def main ():
@@ -343,10 +324,12 @@ def main ():
     logging.basicConfig(format = '[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s',
                         level = numeric_level)
 
+    global PASSWORD, USERNAME
+    USERNAME = args.username
+    PASSWORD = args.password
+
     try:
         setup = BaseSetup (args.test)
-        setup.set_username (args.username)
-        setup.set_password (args.password)
         setup.parse (args.config)
         setup.submit ()
     except Exception as e:
@@ -354,7 +337,7 @@ def main ():
         sys.exit (1)
 
 # script:
-if __name__ == "__main__":
+if __name__ == '__main__':
     main ()
 
 # end of qsubmit.py
