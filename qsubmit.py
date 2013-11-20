@@ -5,7 +5,6 @@
 
 import os, sys
 import subprocess
-# import getopt, ConfigParser
 import time
 import datetime
 import configparser
@@ -13,6 +12,7 @@ import logging
 import argparse
 
 class BaseSetup:
+    """Base class for defining configuration setup"""
     def __init__ (self, test_ = False):
         self._test_          = test_
         self._default_setup_ = ""
@@ -20,6 +20,7 @@ class BaseSetup:
         self._logger_        = logging.getLogger ()
 
     def _parse (self, config_file_):
+        """Parsing the configuration file with configparser object"""
         a_config = configparser.ConfigParser ()
         a_config.read (config_file_)
 
@@ -31,19 +32,19 @@ class BaseSetup:
         self._logger_.debug ('Default setup is ' + self._default_setup_)
 
         # Get software script :
-        self._cadfael_script_ = a_config['config'].get ('cadfael_script', fallback='')
-        self._bayeux_script_  = a_config['config'].get ('bayeux_script' , fallback='')
-        self._channel_script_ = a_config['config'].get ('channel_script', fallback='')
-        self._falaise_script_ = a_config['config'].get ('falaise_script', fallback='')
+        self._cadfael_script_ = a_config['config'].get ('cadfael_script', fallback = '')
+        self._bayeux_script_  = a_config['config'].get ('bayeux_script' , fallback = '')
+        self._channel_script_ = a_config['config'].get ('channel_script', fallback = '')
+        self._falaise_script_ = a_config['config'].get ('falaise_script', fallback = '')
         self._logger_.debug ('Cadfael script = ' + self._cadfael_script_)
         self._logger_.debug ('Bayeux  script = ' + self._bayeux_script_)
         self._logger_.debug ('Channel script = ' + self._channel_script_)
         self._logger_.debug ('Falaise script = ' + self._falaise_script_)
         # or software directory :
-        self._cadfael_directory_ = a_config['config'].get ('cadfael_directory', fallback='')
-        self._bayeux_directory_  = a_config['config'].get ('bayeux_directory' , fallback='')
-        self._channel_directory_ = a_config['config'].get ('channel_directory', fallback='')
-        self._falaise_directory_ = a_config['config'].get ('falaise_directory', fallback='')
+        self._cadfael_directory_ = a_config['config'].get ('cadfael_directory', fallback = '')
+        self._bayeux_directory_  = a_config['config'].get ('bayeux_directory' , fallback = '')
+        self._channel_directory_ = a_config['config'].get ('channel_directory', fallback = '')
+        self._falaise_directory_ = a_config['config'].get ('falaise_directory', fallback = '')
         self._logger_.debug ('Cadfael directory = ' + self._cadfael_directory_)
         self._logger_.debug ('Bayeux  directory = ' + self._bayeux_directory_)
         self._logger_.debug ('Channel directory = ' + self._channel_directory_)
@@ -60,12 +61,12 @@ class BaseSetup:
 
         if self._default_setup_ in "lyon":
             # Get job resources parameters:
-            self._use_hpss_   = a_config['resources'].getboolean ('use_hpss', fallback=False)
-            self._use_sps_    = a_config['resources'].getboolean ('use_sps', fallback=False)
-            self._use_xrootd_ = a_config['resources'].getboolean ('use_xrootd', fallback=False)
-            self._memory_     = a_config['resources'].getfloat ('memory', fallback=0.0)
-            self._cpu_time_   = a_config['resources'].get ('cpu_time', fallback='00:00:00')
-            self._space_size_ = a_config['resources'].getfloat ('space_size', fallback=0.0)
+            self._use_hpss_   = a_config['resources'].getboolean ('use_hpss',   fallback = False)
+            self._use_sps_    = a_config['resources'].getboolean ('use_sps',    fallback = False)
+            self._use_xrootd_ = a_config['resources'].getboolean ('use_xrootd', fallback = False)
+            self._memory_     = a_config['resources'].getfloat ('memory',       fallback = 0.0)
+            self._cpu_time_   = a_config['resources'].get ('cpu_time',          fallback = '00:00:00')
+            self._space_size_ = a_config['resources'].getfloat ('space_size',   fallback = 0.0)
             self._logger_.debug ('Use HPSS         = ' + str (self._use_hpss_))
             self._logger_.debug ('Use SPS          = ' + str (self._use_sps_))
             self._logger_.debug ('Use xrootd       = ' + str (self._use_xrootd_))
@@ -74,9 +75,9 @@ class BaseSetup:
             self._logger_.debug ('Space size value = ' + str (self._space_size_))
 
         # Getting commands to be executed:
-        self._pre_command_  = a_config['command'].get ('pre_command',  fallback='')
-        self._run_command_  = a_config['command'].get ('run_command',  fallback='')
-        self._post_command_ = a_config['command'].get ('post_command', fallback='')
+        self._pre_command_  = a_config['command'].get ('pre_command',  fallback = '')
+        self._run_command_  = a_config['command'].get ('run_command',  fallback = '')
+        self._post_command_ = a_config['command'].get ('post_command', fallback = '')
         self._logger_.debug ('Pre command  = ' + self._pre_command_)
         self._logger_.debug ('Run command  = ' + self._run_command_)
         self._logger_.debug ('Post command = ' + self._post_command_)
@@ -84,10 +85,10 @@ class BaseSetup:
         # # Getting jobs setup:
         # sdir = a_config.get ("jobs", "script_directory")
         # self._script_directory_ = os.path.expandvars (sdir)
-        self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs',         fallback=0)
-        self._script_directory_ = a_config['jobs'].get ('script_directory', fallback='')
-        self._script_prefix_    = a_config['jobs'].get ('script_prefix',    fallback='')
-        self._script_extension_ = a_config['jobs'].get ('script_extension', fallback='.sh')
+        self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs',         fallback = 0)
+        self._script_directory_ = a_config['jobs'].get ('script_directory', fallback = '')
+        self._script_prefix_    = a_config['jobs'].get ('script_prefix',    fallback = '')
+        self._script_extension_ = a_config['jobs'].get ('script_extension', fallback = '.sh')
         self._logger_.debug ('Number of jobs   = ' + self._nbr_jobs_)
         self._logger_.debug ('Script prefix    = ' + self._script_prefix_)
         self._logger_.debug ('Script directory = ' + self._script_directory_)
