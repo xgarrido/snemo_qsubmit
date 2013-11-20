@@ -1,7 +1,21 @@
 #!/usr/bin/env python
-# qsubmit.py
-# Author: Xavier Garrido <garrido@lal.in2p3.fr>
-# Copyright: 2012 (C) NEMO - LAL (IN2P3/CNRS)
+# Copyright (C) 2012-2013  Xavier Garrido <garrido@lal.in2p3.fr>
+#
+# This file is part of qsubmit.
+#
+# Qsubmit is free software; you can redistribute it and/or modify it under the
+# terms of the GNU Lesser General Public License as published by the Free
+# Software Foundation; either version 2.1 of the License, or (at your option)
+# any later version.
+#
+# Paramiko is distrubuted in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+# A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
+# details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with Paramiko; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
 
 import os, sys
 import subprocess
@@ -10,6 +24,7 @@ import datetime
 import configparser
 import logging
 import argparse
+import paramiko
 
 class BaseSetup:
     """Base class for defining configuration setup"""
@@ -19,7 +34,7 @@ class BaseSetup:
         self._script_        = ""
         self._logger_        = logging.getLogger ()
 
-    def _parse (self, config_file_):
+    def parse (self, config_file_):
         """Parsing the configuration file with configparser object"""
         a_config = configparser.ConfigParser ()
         a_config.read (config_file_)
@@ -236,7 +251,7 @@ class BaseSetup:
         self._logger_.info ('Running \'post-command\'...')
         subprocess.call (self._post_command_, shell=True)
 
-    def _submit (self):
+    def submit (self):
         self._logger_.info ('Generating ' + self._nbr_jobs_ + ' job(s) to ' + self._default_setup_)
 
         # Build the script:
@@ -286,31 +301,30 @@ class BaseSetup:
 # Main function:
 def main ():
 
-    parser = argparse.ArgumentParser (description='A python script for running SuperNEMO batch simulations')
+    parser = argparse.ArgumentParser (description = 'A python script for running SuperNEMO batch simulations')
     parser.add_argument ('--log',
-                         choices=['critical', 'error', 'warning', 'info', 'debug'],
-                         default='warning',
-                         help='logging level')
-    parser.add_argument ('--test', action='store_true',
-                         help='only generate file but do not run batch process')
-    parser.add_argument ('--config', required=True,
-                         help='configuration file (mandatory)')
-
+                         choices = ['critical', 'error', 'warning', 'info', 'debug'],
+                         default = 'warning',
+                         help = 'logging level')
+    parser.add_argument ('--test', action = 'store_true',
+                         help = 'only generate file but do not run batch process')
+    parser.add_argument ('--config', required = True,
+                         help = 'configuration file (mandatory)')
     args = parser.parse_args ()
 
     numeric_level = getattr(logging, args.log.upper(), None)
-    logging.basicConfig(format='[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s',
-                        level=numeric_level)
+    logging.basicConfig(format = '[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s',
+                        level = numeric_level)
 
     logger = logging.getLogger ()
     logger.info ('Parsing ' + args.config + ' config file')
 
     # Read the config file:
-    a_setup = BaseSetup (args.test)
-    a_setup._parse (args.config)
+    setup = BaseSetup (args.test)
+    setup.parse (args.config)
 
     # Run jobs:
-    a_setup._submit ()
+    setup.submit ()
 
 # script:
 if __name__ == "__main__":
