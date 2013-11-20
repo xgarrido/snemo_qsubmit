@@ -34,17 +34,22 @@ class BaseSetup:
         self._script_        = ""
         self._logger_        = logging.getLogger ()
 
+    def set_username (self, username_ = ''):
+        """Setting the username to be used for remote connection"""
+        self._username_ = username_
+
+    def set_password (self, password_ = ''):
+        """Setting the password to be used for remote connection"""
+        self._password_ = password_
+
     def parse (self, config_file_):
         """Parsing the configuration file with configparser object"""
         a_config = configparser.ConfigParser ()
         a_config.read (config_file_)
 
-        # Get default setup :
-        self._default_setup_ = a_config['config']['default_setup']
-
-        if not self._default_setup_ in ("lyon", "lal", "local"):
-            raise ValueError ('Default setup ' + self._default_setup_ + ' is not supported !')
-        self._logger_.debug ('Default setup is ' + self._default_setup_)
+        # Get hostname :
+        self._hostname_ = a_config['config']['hostname']
+        self._logger_.debug ('Hostname is ' + self._hostname_)
 
         # Get software script :
         self._cadfael_script_ = a_config['config'].get ('cadfael_script', fallback = '')
@@ -281,19 +286,35 @@ class BaseSetup:
             os.chmod (a_script_filename, 755)
 
             if self._default_setup_ in "lyon":
-                qsub_cmd = "qsub -j y -P P_nemo"       \
-                    + " -N " + a_job_name              \
-                    + " -o " + self._script_directory_ \
-                    + " " + a_script_filename
+                try:
+                    client = paramiko.SSHClient ()
+                    client.load_system_host_keys ()
+                    client.set_missing_host_key_policy (paramiko.WarningPolicy())
+                    self._logger_.info ('Connecting to ccage.in2p3.fr...')
+                    self._logger_.info ('username ' + self._username_)
+                    self._logger_.info ('password ' + self._password_)
+                    client.connect (hostname=self._hostname_, username=self._username_, password=self._password_)
+                except Exception as e:
+                    self._logger_.error ('Caught exception: %s %s' % (e.__class__, e))
+                    try:
+                        client.close ()
+                    except:
+                        pass
+                        sys.exit(1)
 
-                self._logger_.debug ('qsub command = ' + qsub_cmd)
+                        # qsub_cmd = "qsub -j y -P P_nemo"       \
+                #     + " -N " + a_job_name              \
+                #     + " -o " + self._script_directory_ \
+                #     + " " + a_script_filename
 
-                if not self._test_:
-                    subprocess.call (qsub_cmd, shell=True)
-                    # This prevent same seed (fixed now by F. Mauger)
-                    time.sleep (1)
-                else:
-                    self._logger_.info ('Mode test')
+                # self._logger_.debug ('qsub command = ' + qsub_cmd)
+
+                # if not self._test_:
+                #     subprocess.call (qsub_cmd, shell=True)
+                #     # This prevent same seed (fixed now by F. Mauger)
+                #     time.sleep (1)
+                # else:
+                #     self._logger_.info ('Mode test')
 
         # Run postcommand:
         self._run_post_command ()
@@ -310,21 +331,26 @@ def main ():
                          help = 'only generate file but do not run batch process')
     parser.add_argument ('--config', required = True,
                          help = 'configuration file (mandatory)')
+    parser.add_argument ('--username', default = '',
+                         help = 'username for remote connection')
+    parser.add_argument ('--password', default = '',
+                         help = 'password for remote connection')
     args = parser.parse_args ()
 
+    # Setting logging level
     numeric_level = getattr(logging, args.log.upper(), None)
     logging.basicConfig(format = '[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s',
                         level = numeric_level)
 
-    logger = logging.getLogger ()
-    logger.info ('Parsing ' + args.config + ' config file')
-
-    # Read the config file:
-    setup = BaseSetup (args.test)
-    setup.parse (args.config)
-
-    # Run jobs:
-    setup.submit ()
+    try:
+        setup = BaseSetup (args.test)
+        setup.set_username (args.username)
+        setup.set_password (args.password)
+        setup.parse (args.config)
+        setup.submit ()
+    except Exception as e:
+        logging.getLogger ().error ('Caught exception: %s' % e)
+        sys.exit (1)
 
 # script:
 if __name__ == "__main__":
