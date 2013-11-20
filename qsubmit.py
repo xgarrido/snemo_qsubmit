@@ -24,10 +24,12 @@ import datetime
 import configparser
 import logging
 import argparse
+import re
 import paramiko
 
-USERNAME = 'garrido'
+USERNAME = 'lal'
 PASSWORD = 'lol'
+NBR_MAX_PENDING_JOBS = 100
 
 class BaseSetup:
     """Base class for defining configuration setup"""
@@ -285,12 +287,27 @@ class BaseSetup:
                     sftp.close ()
                     client.exec_command ('chmod 755 ' + remote_file_path)
                     if not self._test_:
-                        qsub_cmd = 'qsub -j y -P P_nemo'              \
+                        sge_cmd = 'export SGE_ROOT=/opt/sge;' \
+                                  'export SGE_CELL=ccin2p3;'
+                        qprefix_cmd = '/opt/sge/bin/lx-amd64/'
+
+                        qsub_cmd = sge_cmd + qprefix_cmd              \
+                                   + 'qsub'                           \
+                                   + ' -j y -P P_nemo'                \
                                    + ' -N ' + job_name                \
                                    + ' -o ' + self._script_directory_ \
                                    + ' ' + remote_file_path
                         self._logger_.debug ('qsub command = ' + qsub_cmd)
                         client.exec_command (qsub_cmd)
+
+                        while True:
+                            stderr, stdout, stdin = client.exec_command (sge_cmd + qprefix_cmd + 'qstat | wc -l')
+                            nbr_pending_jobs = re.sub('[b\'n\\\]','', str(stdout.read()))
+                            if int(nbr_pending_jobs) < NBR_MAX_PENDING_JOBS:
+                                self._logger_.debug ('Number of pending jobs is ' + nbr_pending_jobs)
+                                break
+                            self._logger_.info ('Too much pending jobs... Waiting...')
+                            time.sleep (60)
                     else:
                         self._logger_.debug ('This is test mode')
                 except Exception as e:
@@ -317,6 +334,8 @@ def main ():
                          help = 'username for remote connection')
     parser.add_argument ('--password', default = '',
                          help = 'password for remote connection')
+    parser.add_argument ('--nbr-pending-jobs', default = 200,
+                         help = 'maximum number of pending jobs before resubmitting')
     args = parser.parse_args ()
 
     # Setting logging level
@@ -324,9 +343,10 @@ def main ():
     logging.basicConfig(format = '[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s',
                         level = numeric_level)
 
-    global PASSWORD, USERNAME
+    global PASSWORD, USERNAME, NBR_MAX_PENDING_JOBS
     USERNAME = args.username
     PASSWORD = args.password
+    NBR_MAX_PENDING_JOBS = args.nbr_pending_jobs
 
     try:
         setup = BaseSetup (args.test)
