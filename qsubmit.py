@@ -17,7 +17,7 @@
 # along with Paramiko; if not, write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
 
-import os, sys
+import os, sys, stat
 import subprocess
 import time
 import datetime
@@ -274,16 +274,13 @@ class BaseSetup:
             # # Replacing prefixed variable with @XXX@ label
             # self._replace_variable (ijob)
 
-            a_job_name        = self._script_prefix_ + "_" + str (ijob)
-            a_script_filename = self._script_directory_ + "/" + \
-                a_job_name + self._script_extension_
+            job_name        = self._script_prefix_ + '_' + str (ijob)
+            script_file_name = job_name + self._script_extension_
+            script_file_directory = self._script_directory_ + '/' + script_file_name
 
-            a_script_file = open (a_script_filename, 'w')
-            a_script_file.write (self._script_)
-            a_script_file.close ()
-
-            # Change file right permission to make it executable
-            os.chmod (a_script_filename, 755)
+            script_file = open (script_file_directory, 'w')
+            script_file.write (self._script_)
+            script_file.close ()
 
             if self._default_setup_ in "lyon":
                 try:
@@ -291,9 +288,13 @@ class BaseSetup:
                     client.load_system_host_keys ()
                     client.set_missing_host_key_policy (paramiko.WarningPolicy())
                     self._logger_.info ('Connecting to ccage.in2p3.fr...')
-                    self._logger_.info ('username ' + self._username_)
-                    self._logger_.info ('password ' + self._password_)
                     client.connect (hostname=self._hostname_, username=self._username_, password=self._password_)
+                    remote_path = '/tmp/garrido/qsubmit.d'
+                    client.exec_command ('mkdir -p ' + remote_path)
+                    sftp = client.open_sftp ()
+                    sftp.put (script_file_directory, remote_path + '/' + script_file_name)
+                    sftp.close ()
+                    client.exec_command ('chmod 755 %s/%s' % (remote_path, script_file_name))
                 except Exception as e:
                     self._logger_.error ('Caught exception: %s %s' % (e.__class__, e))
                     try:
