@@ -275,7 +275,7 @@ class BaseSetup:
                     client.load_system_host_keys ()
                     client.set_missing_host_key_policy (paramiko.WarningPolicy ())
                     self._logger_.info ('Connecting to ccage.in2p3.fr...')
-                    client.connect (hostname='ccage029.in2p3.fr',
+                    client.connect (hostname='ccage.in2p3.fr',
                                     username=USERNAME,
                                     password=PASSWORD)
                     client.exec_command ('mkdir -p ' + self._script_directory_)
