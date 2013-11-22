@@ -27,9 +27,8 @@ import argparse
 import re
 import paramiko
 
-USERNAME = 'lal'
+USERNAME = os.environ['USER']
 PASSWORD = 'lol'
-NBR_MAX_PENDING_JOBS = 100
 
 class BaseSetup:
     """Base class for defining configuration setup"""
@@ -100,13 +99,15 @@ class BaseSetup:
 
         # # Getting jobs setup:
         self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs',         fallback=0)
+        self._nbr_pending_jobs_ = a_config['jobs'].get ('nbr_pending_jobs', fallback=100)
         self._script_directory_ = a_config['jobs'].get ('script_directory', fallback='')
         self._script_prefix_    = a_config['jobs'].get ('script_prefix',    fallback='')
         self._script_extension_ = a_config['jobs'].get ('script_extension', fallback='.sh')
-        self._logger_.debug ('Number of jobs   = ' + self._nbr_jobs_)
-        self._logger_.debug ('Script prefix    = ' + self._script_prefix_)
-        self._logger_.debug ('Script directory = ' + self._script_directory_)
-        self._logger_.debug ('Script extension = ' + self._script_extension_)
+        self._logger_.debug ('Number of jobs         = ' + self._nbr_jobs_)
+        self._logger_.debug ('Number of pending jobs = ' + self._nbr_pending_jobs_)
+        self._logger_.debug ('Script prefix          = ' + self._script_prefix_)
+        self._logger_.debug ('Script directory       = ' + self._script_directory_)
+        self._logger_.debug ('Script extension       = ' + self._script_extension_)
 
     def _build_header (self):
         header = '#!/bin/bash' + os.linesep
@@ -247,76 +248,86 @@ class BaseSetup:
         # Build the script:
         self._build ()
 
-        for ijob in range (int (self._nbr_jobs_)):
-            self._logger_.info ('Submiting job #' + str (ijob) + '...')
-
-            # # Replacing prefixed variable with @XXX@ label
-            # self._replace_variable (ijob)
-
-            # Expand path
-            self._script_directory_ = os.path.expandvars (self._script_directory_)
-            self._logger_.debug ('Script directory is ' + self._script_directory_)
-
-            # Temporary directory for storing script file
-            tmp_dir = os.path.expandvars ('/tmp/${USER}/qsubmit.d')
-            if not os.path.exists (tmp_dir):
-                os.makedirs (tmp_dir)
-
-            job_name         = self._script_prefix_ + '_' + str (ijob)
-            script_file_name = job_name + self._script_extension_
-            script_tmp_path  = tmp_dir + '/' + script_file_name
-
-            script_file = open (script_tmp_path, 'w')
-            script_file.write (self._script_)
-            script_file.close ()
-
+        # Open ssh connection
+        try:
+            self._logger_.debug ('Username = ' + USERNAME + ' password = ' + PASSWORD)
+            ssh = paramiko.SSHClient ()
+            ssh.load_system_host_keys ()
+            ssh.set_missing_host_key_policy (paramiko.WarningPolicy ())
             if self._default_setup_ in 'lyon':
+                self._logger_.info ('Connecting to ccage.in2p3.fr...')
+                ssh.connect (hostname='ccage.in2p3.fr',
+                             username=USERNAME,
+                             password=PASSWORD)
+
+
+            for ijob in range (int (self._nbr_jobs_)):
+                self._logger_.info ('Submiting job #' + str (ijob) + '...')
+
+                # # Replacing prefixed variable with @XXX@ label
+                # self._replace_variable (ijob)
+
+                # Expand path
+                self._script_directory_ = os.path.expandvars (self._script_directory_)
+                self._logger_.debug ('Script directory is ' + self._script_directory_)
+
+                # Temporary directory for storing script file
+                tmp_dir = os.path.expandvars ('/tmp/${USER}/qsubmit.d')
+                if not os.path.exists (tmp_dir):
+                    os.makedirs (tmp_dir)
+
+                job_name         = self._script_prefix_ + '_' + str (ijob)
+                script_file_name = job_name + self._script_extension_
+                script_tmp_path  = tmp_dir + '/' + script_file_name
+
+                script_file = open (script_tmp_path, 'w')
+                script_file.write (self._script_)
+                script_file.close ()
+
+                self._logger_.debug ('Creating remote path ' + self._script_directory_)
+                ssh.exec_command ('mkdir -p ' + self._script_directory_)
                 remote_file_path = self._script_directory_ + '/' + script_file_name
-                try:
-                    client = paramiko.SSHClient ()
-                    client.load_system_host_keys ()
-                    client.set_missing_host_key_policy (paramiko.WarningPolicy ())
-                    self._logger_.info ('Connecting to ccage.in2p3.fr...')
-                    client.connect (hostname='ccage.in2p3.fr',
-                                    username=USERNAME,
-                                    password=PASSWORD)
-                    client.exec_command ('mkdir -p ' + self._script_directory_)
-                    sftp = client.open_sftp ()
-                    self._logger_.debug ('Copying file ' + script_tmp_path + ' to ' + remote_file_path)
-                    sftp.put (script_tmp_path, remote_file_path)
-                    sftp.close ()
-                    client.exec_command ('chmod 755 ' + remote_file_path)
-                    if not self._test_:
+                self._logger_.debug ('Copying file ' + script_tmp_path + ' to ' + remote_file_path)
+                sftp = ssh.open_sftp ()
+                sftp.put (script_tmp_path, remote_file_path)
+                sftp.close ()
+                ssh.exec_command ('chmod 755 ' + remote_file_path)
+                if self._test_:
+                    self._logger_.debug ('This is test mode')
+                else:
+                    qsub_cmd = ''
+                    qstat_cmd = ''
+                    if self._default_setup_ in 'lyon':
                         sge_cmd = 'export SGE_ROOT=/opt/sge;' \
                                   'export SGE_CELL=ccin2p3;'
                         qprefix_cmd = '/opt/sge/bin/lx-amd64/'
 
+                        qstat_cmd = sge_cmd + qprefix_cmd + 'qstat | wc -l'
                         qsub_cmd = sge_cmd + qprefix_cmd              \
                                    + 'qsub'                           \
                                    + ' -j y -P P_nemo'                \
                                    + ' -N ' + job_name                \
                                    + ' -o ' + self._script_directory_ \
                                    + ' ' + remote_file_path
-                        self._logger_.debug ('qsub command = ' + qsub_cmd)
-                        client.exec_command (qsub_cmd)
 
-                        while True:
-                            stderr, stdout, stdin = client.exec_command (sge_cmd + qprefix_cmd + 'qstat | wc -l')
-                            nbr_pending_jobs = re.sub('[b\'n\\\]','', str(stdout.read()))
-                            if int(nbr_pending_jobs) < NBR_MAX_PENDING_JOBS:
-                                self._logger_.debug ('Number of pending jobs is ' + nbr_pending_jobs)
-                                break
+                    self._logger_.debug ('qsub command = ' + qsub_cmd)
+                    ssh.exec_command (qsub_cmd)
+
+                    while True:
+                        stderr, stdout, stdin = ssh.exec_command (qstat_cmd)
+                        nbr_pending_jobs = re.sub('[b\'n\\\]','', str (stdout.read()))
+                        if int (nbr_pending_jobs) < self._nbr_pending_jobs_:
+                            self._logger_.debug ('Number of pending jobs is ' + nbr_pending_jobs)
+                            break
                             self._logger_.info ('Too much pending jobs... Waiting...')
                             time.sleep (60)
-                    else:
-                        self._logger_.debug ('This is test mode')
-                except Exception as e:
-                    self._logger_.error ('Caught exception: %s %s' % (e.__class__, e))
-                    try:
-                        client.close ()
-                    except:
-                        pass
-                        sys.exit(1)
+        except Exception as e:
+            self._logger_.error ('Caught exception: %s %s' % (e.__class__, e))
+            try:
+                ssh.close ()
+            except:
+                pass
+                sys.exit(1)
 
 # Main function:
 def main ():
@@ -330,7 +341,7 @@ def main ():
                          help = 'only generate file but do not run batch process')
     parser.add_argument ('--config', required = True,
                          help = 'configuration file (mandatory)')
-    parser.add_argument ('--username', default = '',
+    parser.add_argument ('--username', default = os.environ['USER'],
                          help = 'username for remote connection')
     parser.add_argument ('--password', default = '',
                          help = 'password for remote connection')
@@ -343,10 +354,9 @@ def main ():
     logging.basicConfig(format = '[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s',
                         level = numeric_level)
 
-    global PASSWORD, USERNAME, NBR_MAX_PENDING_JOBS
+    global PASSWORD, USERNAME
     USERNAME = args.username
     PASSWORD = args.password
-    NBR_MAX_PENDING_JOBS = args.nbr_pending_jobs
 
     try:
         setup = BaseSetup (args.test)
