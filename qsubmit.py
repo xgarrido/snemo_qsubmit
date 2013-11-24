@@ -18,7 +18,6 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
 
 import os, sys, stat
-import subprocess
 import time
 import datetime
 import configparser
@@ -29,16 +28,17 @@ import paramiko
 
 USERNAME = os.environ['USER']
 PASSWORD = 'lol'
+HOSTNAME = ''
 
 class BaseSetup:
-    """Base class for defining configuration setup"""
+    '''Base class for defining configuration setup'''
     def __init__ (self, test_ = False):
         self._test_   = test_
         self._logger_ = logging.getLogger ()
         self._script_ = ''
 
     def parse (self, config_file_):
-        """Parsing the configuration file with configparser object"""
+        '''Parsing the configuration file with configparser object'''
         a_config = configparser.ConfigParser ()
         a_config.read (config_file_)
 
@@ -79,9 +79,9 @@ class BaseSetup:
             self._use_hpss_   = a_config['resources'].getboolean ('use_hpss',   fallback=False)
             self._use_sps_    = a_config['resources'].getboolean ('use_sps',    fallback=False)
             self._use_xrootd_ = a_config['resources'].getboolean ('use_xrootd', fallback=False)
-            self._memory_     = a_config['resources'].getfloat ('memory',       fallback=0.0)
-            self._cpu_time_   = a_config['resources'].get ('cpu_time',          fallback='00:00:00')
-            self._space_size_ = a_config['resources'].getfloat ('space_size',   fallback=0.0)
+            self._memory_     = a_config['resources'].get ('memory',     fallback='0.0G')
+            self._cpu_time_   = a_config['resources'].get ('cpu_time',   fallback='00:00:00')
+            self._space_size_ = a_config['resources'].get ('space_size', fallback='0.0G')
             self._logger_.debug ('Use HPSS         = ' + str (self._use_hpss_))
             self._logger_.debug ('Use SPS          = ' + str (self._use_sps_))
             self._logger_.debug ('Use xrootd       = ' + str (self._use_xrootd_))
@@ -103,8 +103,8 @@ class BaseSetup:
         self._script_directory_ = a_config['jobs'].get ('script_directory', fallback='')
         self._script_prefix_    = a_config['jobs'].get ('script_prefix',    fallback='')
         self._script_extension_ = a_config['jobs'].get ('script_extension', fallback='.sh')
-        self._logger_.debug ('Number of jobs         = ' + self._nbr_jobs_)
-        self._logger_.debug ('Number of pending jobs = ' + self._nbr_pending_jobs_)
+        self._logger_.debug ('Number of jobs         = ' + str (self._nbr_jobs_))
+        self._logger_.debug ('Number of pending jobs = ' + str (self._nbr_pending_jobs_))
         self._logger_.debug ('Script prefix          = ' + self._script_prefix_)
         self._logger_.debug ('Script directory       = ' + self._script_directory_)
         self._logger_.debug ('Script extension       = ' + self._script_extension_)
@@ -127,9 +127,9 @@ class BaseSetup:
             header += '#$ -l hpss='  + str (int (self._use_hpss_))   + os.linesep
             header += '#$ -l sps='   + str (int (self._use_sps_))    + os.linesep
             header += '#$ -l xrootd='+ str (int (self._use_xrootd_)) + os.linesep
-            header += '#$ -l ct='    + str (self._cpu_time_)         + os.linesep
-            header += '#$ -l vmem='  + str (self._memory_) + 'M'     + os.linesep
-            header += '#$ -l fsize=' + str (self._space_size_) + 'G' + os.linesep
+            header += '#$ -l ct='    + self._cpu_time_               + os.linesep
+            header += '#$ -l vmem='  + self._memory_                 + os.linesep
+            header += '#$ -l fsize=' + self._space_size_             + os.linesep
         self._logger_.debug ('Header dump:' + header)
         self._script_ += header
 
@@ -165,14 +165,17 @@ class BaseSetup:
         if not self._bayeux_script_:
             # Things are getting more complicated in this case: order matters
             components = [ 'datatools',
+                           'mygsl',
+                           'materials',
+                           'geomtools',
                            'brio',
                            'cuts',
-                           'mygsl',
-                           'geomtools',
-                           'genbb_help',
                            'genvtx',
-                           'materials',
-                           'trackfit' ]
+                           'trackfit',
+                           'emfield',
+                           'dpp',
+                           'genbb_help',
+                           'mctools' ]
             for icompo in components:
                 cmd += 'source ' + self._bayeux_directory_ + '/' + icompo + \
                        '/__install*/etc/' + icompo.lower () + \
@@ -194,9 +197,6 @@ class BaseSetup:
             # Things are getting more complicated in this case: order matters
             components = [ 'sngeometry',
                            'sncore',
-                           'sngenvertex',
-                           'sngenbb',
-                           'sng4',
                            'snreconstruction',
                            'snvisualization',
                            'snanalysis' ]
@@ -255,8 +255,11 @@ class BaseSetup:
             ssh.load_system_host_keys ()
             ssh.set_missing_host_key_policy (paramiko.WarningPolicy ())
             if self._default_setup_ in 'lyon':
-                self._logger_.info ('Connecting to ccage.in2p3.fr...')
-                ssh.connect (hostname='ccage.in2p3.fr',
+                hostname = HOSTNAME
+                if not hostname:
+                    hostname = 'ccage.in2p3.fr'
+                self._logger_.info ('Connecting to ' + hostname + '...')
+                ssh.connect (hostname=hostname,
                              username=USERNAME,
                              password=PASSWORD)
 
@@ -341,12 +344,12 @@ def main ():
                          help = 'only generate file but do not run batch process')
     parser.add_argument ('--config', required = True,
                          help = 'configuration file (mandatory)')
+    parser.add_argument ('--hostname', default = '',
+                         help = 'hostname for remote connection')
     parser.add_argument ('--username', default = os.environ['USER'],
                          help = 'username for remote connection')
     parser.add_argument ('--password', default = '',
                          help = 'password for remote connection')
-    parser.add_argument ('--nbr-pending-jobs', default = 200,
-                         help = 'maximum number of pending jobs before resubmitting')
     args = parser.parse_args ()
 
     # Setting logging level
@@ -354,7 +357,8 @@ def main ():
     logging.basicConfig(format = '[%(levelname)s:%(module)s::%(funcName)s:%(lineno)d] %(message)s',
                         level = numeric_level)
 
-    global PASSWORD, USERNAME
+    global PASSWORD, USERNAME, HOSTNAME
+    HOSTNAME = args.hostname
     USERNAME = args.username
     PASSWORD = args.password
 
