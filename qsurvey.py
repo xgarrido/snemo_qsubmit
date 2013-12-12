@@ -50,11 +50,11 @@ def survey ():
                           'export SGE_CELL=ccin2p3;'
                 qprefix_cmd = '/opt/sge/bin/lx-amd64/'
                 qstat_cmd = sge_cmd + \
-                            'echo -ne "Total number of jobs: ";' + qprefix_cmd + 'qstat | wc -l;' + \
+                            'echo -ne "Total number of jobs: ";' + qprefix_cmd + 'qstat | tail -n+3 | wc -l;' + \
                             'echo -ne "Number of running jobs: ";' + \
-                            qprefix_cmd + 'qstat | awk "{if (\$5 == \"r\") print 1}" | wc -l;' + \
-                            'echo "Number of jobs run by NEMO users";' + \
-                            qprefix_cmd + 'qstat -u \* -ext -s r| grep nemo | awk "{print \$5}" | sort | uniq -c'
+                            qprefix_cmd + 'qstat -s r | tail -n+3 | wc -l;' + \
+                            'echo "Number of jobs run by NEMO users:";' + \
+                            qprefix_cmd + 'qstat -u \* -ext -s r | tail -n+3 | grep nemo | awk "{print \$5}" | sort | uniq -c'
                 logging.getLogger ().debug ('qstat_cmd = ' + qstat_cmd)
                 stderr, stdout, stdin = ssh.exec_command (qstat_cmd)
                 text = ''
