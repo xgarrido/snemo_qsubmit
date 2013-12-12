@@ -322,6 +322,7 @@ class BaseSetup:
                         if int (nbr_pending_jobs) < self._nbr_pending_jobs_:
                             self._logger_.debug ('Number of pending jobs is ' + nbr_pending_jobs)
                             break
+                        else:
                             self._logger_.info ('Too much pending jobs... Waiting...')
                             time.sleep (60)
         except Exception as e:
