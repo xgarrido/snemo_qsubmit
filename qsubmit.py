@@ -99,7 +99,7 @@ class BaseSetup:
 
         # # Getting jobs setup:
         self._nbr_jobs_         = a_config['jobs'].get ('nbr_jobs',         fallback=0)
-        self._nbr_pending_jobs_ = a_config['jobs'].get ('nbr_pending_jobs', fallback=100)
+        self._nbr_pending_jobs_ = a_config['jobs'].get ('nbr_pending_jobs', fallback=110)
         self._script_directory_ = a_config['jobs'].get ('script_directory', fallback='')
         self._script_prefix_    = a_config['jobs'].get ('script_prefix',    fallback='')
         self._script_extension_ = a_config['jobs'].get ('script_extension', fallback='.sh')
