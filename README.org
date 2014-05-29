@@ -1,0 +1,22 @@
+#+TITLE: Utilities for submitting jobs to cluster
+#+AUTHOR: Xavier Garrido
+#+EMAIL: xavier.garrido@lal.in2p3.fr
+
+* Introduction
+This package provides utilities for using/running the =qsub= for job submission
+to a cluster of machine. Documentation on =qsub= can be found [[http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html][here]] and was
+initially developped to be use on Sun Grid Engine /aka/ SGE. The system of
+commands -- =qsub=, =qstat=, ... -- are also used in the in2p3 Computing
+Center. For more details on how to run batch jobs, refer to the following [[http://cc.in2p3.fr/The-Computing-Centre-batch-farms][howto]].
+
+* Repository content
+For the time being, there are mainly two =python3= scripts :
+
+- =qsubmit.py= :: the script send job submission given a configuration file
+                  where several options, interactive commands can be set. It
+                  can be run on a local machine and will use a remote connection
+                  /via/ =paramiko= python package to properly send jobs to CC.
+- =qsurvey.py= :: the script runs as a daemon and looks for the job submission
+                  status by sending a summary of number of jobs, job
+                  loads... /via/ a notification popup.
+* Script usage
