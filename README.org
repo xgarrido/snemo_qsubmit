@@ -1,6 +1,7 @@
 #+TITLE: Utilities for submitting jobs to cluster
 #+AUTHOR: Xavier Garrido
 #+EMAIL: xavier.garrido@lal.in2p3.fr
+#+OPTIONS: toc:nil num:nil
 
 * Introduction
 This package provides utilities for using/running the =qsub= for job submission
