@@ -59,7 +59,7 @@ def survey ():
                 stderr, stdout, stdin = ssh.exec_command (qstat_cmd)
                 text = ''
                 for line in stdout:
-                    text += re.sub('b\'|\\\\n|\'','', str (line)) + '\n'
+                    text += re.sub('b\'|\\\\n|\'','', str (line)) # + '\n'
                 logging.getLogger ().debug (text)
                 subprocess.call('notify-send -t 5000 -i stock_dialog-info "qsurvey" "' + text +'"', shell=True)
                 time.sleep (60)
