@@ -46,34 +46,6 @@ class BaseSetup:
         self._default_setup_ = a_config['config']['default_setup']
         self._logger_.debug ('Default setup is ' + self._default_setup_)
 
-        # Get software script :
-        self._cadfael_script_ = a_config['config'].get ('cadfael_script', fallback='')
-        self._bayeux_script_  = a_config['config'].get ('bayeux_script' , fallback='')
-        self._channel_script_ = a_config['config'].get ('channel_script', fallback='')
-        self._falaise_script_ = a_config['config'].get ('falaise_script', fallback='')
-        self._logger_.debug ('Cadfael script = ' + self._cadfael_script_)
-        self._logger_.debug ('Bayeux  script = ' + self._bayeux_script_)
-        self._logger_.debug ('Channel script = ' + self._channel_script_)
-        self._logger_.debug ('Falaise script = ' + self._falaise_script_)
-        # or software directory :
-        self._cadfael_directory_ = a_config['config'].get ('cadfael_directory', fallback='')
-        self._bayeux_directory_  = a_config['config'].get ('bayeux_directory' , fallback='')
-        self._channel_directory_ = a_config['config'].get ('channel_directory', fallback='')
-        self._falaise_directory_ = a_config['config'].get ('falaise_directory', fallback='')
-        self._logger_.debug ('Cadfael directory = ' + self._cadfael_directory_)
-        self._logger_.debug ('Bayeux  directory = ' + self._bayeux_directory_)
-        self._logger_.debug ('Channel directory = ' + self._channel_directory_)
-        self._logger_.debug ('Falaise directory = ' + self._falaise_directory_)
-
-        if not self._cadfael_script_ and not self._cadfael_directory_:
-            raise ValueError ('No Cadfael script nor directory have been set !')
-        if not self._bayeux_script_ and not self._bayeux_directory_:
-            raise ValueError ('No Bayeux script nor directory have been set !')
-        if not self._channel_script_ and not self._channel_directory_:
-            raise ValueError ('No Channel script nor directory have been set !')
-        if not self._falaise_script_ and not self._falaise_directory_:
-            raise ValueError ('No Falaise script nor directory have been set !')
-
         if self._default_setup_ in 'lyon':
             # Get job resources parameters:
             self._use_hpss_   = a_config['resources'].getboolean ('use_hpss',   fallback=False)
@@ -147,68 +119,6 @@ class BaseSetup:
         footer += '##########################' + os.linesep
         self._script_ += footer
 
-    def _build_source (self):
-        # Define 'source' command:
-        cmd = '' + os.linesep
-
-        # Setting setup file to be sourced:
-        if self._cadfael_script_:
-            cmd += 'source ' + self._cadfael_script_ + ' && do_cadfael_all_setup' + os.linesep
-        if self._bayeux_script_:
-            cmd += 'source ' + self._bayeux_script_ + ' && do_bayeux_all_setup' + os.linesep
-        if self._channel_script_:
-            cmd += 'source ' + self._channel_script_ + ' && do_channel_all_setup' + os.linesep
-        if self._falaise_script_:
-            cmd += 'source ' + self._falaise_script_ + ' && do_falaise_all_setup' + os.linesep
-
-        # Bayeux setup:
-        if not self._bayeux_script_:
-            # Things are getting more complicated in this case: order matters
-            components = [ 'datatools',
-                           'mygsl',
-                           'materials',
-                           'geomtools',
-                           'brio',
-                           'cuts',
-                           'genvtx',
-                           'trackfit',
-                           'emfield',
-                           'dpp',
-                           'genbb_help',
-                           'mctools' ]
-            for icompo in components:
-                cmd += 'source ' + self._bayeux_directory_ + '/' + icompo + \
-                       '/__install*/etc/' + icompo.lower () + \
-                       '_setup.sh && do_' + icompo.lower () + '_setup' + os.linesep
-
-        # Channel setup:
-        if not self._channel_script_:
-            # Things are getting more complicated in this case: order matters
-            components = [ 'TrackerPreClustering',
-                           'CellularAutomatonTracker',
-                           'TrackerClusterPath' ]
-            for icompo in components:
-                cmd += 'source ' + self._channel_directory_ + '/' + icompo + \
-                       '/__install*/etc/' + icompo.lower () + \
-                       '_setup.sh && do_' + icompo.lower () + '_setup' + os.linesep
-
-        # Falaise setup:
-        if not self._falaise_script_:
-            # Things are getting more complicated in this case: order matters
-            components = [ 'sngeometry',
-                           'sncore',
-                           'snreconstruction',
-                           'snvisualization',
-                           'snanalysis' ]
-
-            for icompo in components:
-                cmd += 'source ' + self._falaise_directory_ + '/' + icompo + \
-                       '/__install*/etc/' + icompo.lower () + \
-                       '_setup.sh && do_' + icompo.lower () + '_setup' + os.linesep
-
-        self._logger_.debug ('Source file dump:' + cmd)
-        self._script_ += cmd
-
     def _build_commands (self):
         command  = os.linesep
         command += '##########################' + os.linesep
@@ -224,9 +134,6 @@ class BaseSetup:
     def _build (self):
         # Create an header
         self._build_header ()
-
-        # Source config
-        self._build_source ()
 
         # Commands
         self._build_commands ()
