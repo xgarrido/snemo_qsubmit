@@ -226,7 +226,7 @@ class BaseSetup:
                     while True:
                         stderr, stdout, stdin = ssh.exec_command (qstat_cmd)
                         nbr_pending_jobs = re.sub('[b\'n\\\]','', str (stdout.read()))
-                        if int (nbr_pending_jobs) < self._nbr_pending_jobs_:
+                        if int (nbr_pending_jobs) < int (self._nbr_pending_jobs_):
                             self._logger_.debug ('Number of pending jobs is ' + nbr_pending_jobs)
                             break
                         else:
