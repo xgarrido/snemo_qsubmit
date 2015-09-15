@@ -169,6 +169,15 @@ class BaseSetup:
                 ssh.connect (hostname=hostname,
                              username=USERNAME,
                              password=PASSWORD)
+            if self._default_setup_ in 'xtremweb':
+                hostname = HOSTNAME
+                if not hostname:
+                    hostname = '134.158.89.155'
+                self._logger_.info ('Connecting to ' + hostname + '...')
+                ssh.connect (hostname=hostname,
+                             username=USERNAME,
+                             password=PASSWORD,
+                             port=2222)
 
 
             for ijob in range (int (self._nbr_jobs_)):
